@@ -1,0 +1,15 @@
+change_intent:
+  requirement_id: REQ-BROAD-COVERAGE
+  author: codex
+  broad_scope_threshold_percent: 101
+  scope_policy:
+    broad_scope_threshold_percent: 101
+  allowed_paths:
+    - ".harness/**"
+    - "collab/**"
+    - "docs/**"
+    - "policies/**"
+    - "scripts/**"
+    - "summaries/**"
+    - "templates/**"
+  forbidden_paths: []

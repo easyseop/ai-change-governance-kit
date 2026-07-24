@@ -1,0 +1,9 @@
+change_intent:
+  requirement_id: REQ-TASK-012
+  purpose: TASK-012 evidence integration fixture
+  author: codex
+  allowed_paths:
+    - app/**
+  forbidden_paths: []
+  expected_change_types:
+    - test_update

@@ -1,0 +1,9 @@
+change_intent:
+  requirement_id: REQ-EXPECTED-PRESENT
+  author: codex
+  allowed_paths:
+    - app/**
+  forbidden_paths: []
+  expected_paths:
+    - app/required.py
+    - app/config.yaml

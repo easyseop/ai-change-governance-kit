@@ -1,0 +1,4647 @@
+cases:
+  - name: language-router-coverage
+    gate: language-router
+    input:
+      name_status: tests/fixtures/language-routing/name-status.txt
+      language_routing: policies/language-routing.yaml
+    expect:
+      verdict: pass
+      exit_code: 0
+      changed_files:
+        - app/AccountService.java
+        - app/service.py
+        - cmd/server.go
+        - web/app.tsx
+      coverage_counts:
+        supported: 1
+        stubbed: 2
+        unsupported: 1
+      file_routes:
+        - path: app/AccountService.java
+          adapter: java
+          status: stub
+          deep_analysis: not_yet_available
+        - path: app/service.py
+          adapter: python
+          status: supported
+          deep_analysis: available
+        - path: cmd/server.go
+          adapter: unsupported
+          status: unsupported
+          deep_analysis: not_available
+        - path: web/app.tsx
+          adapter: typescript
+          status: stub
+          deep_analysis: not_yet_available
+      deterministic_stdout: true
+
+  - name: language-router-legacy-layers-missing
+    gate: language-router
+    input:
+      name_status: tests/fixtures/language-routing/name-status.txt
+      language_routing: tests/fixtures/language-routing/legacy-status-only.yaml
+    expect:
+      verdict: pass
+      exit_code: 0
+      coverage_counts:
+        supported: 0
+        stubbed: 1
+        unsupported: 3
+      file_routes:
+        - path: app/AccountService.java
+          adapter: java
+          status: supported
+          deep_analysis: not_yet_available
+        - path: app/service.py
+          adapter: unsupported
+          status: unsupported
+          deep_analysis: not_available
+        - path: cmd/server.go
+          adapter: unsupported
+          status: unsupported
+          deep_analysis: not_available
+        - path: web/app.tsx
+          adapter: unsupported
+          status: unsupported
+          deep_analysis: not_available
+      layer_errors_present: true
+
+  - name: language-router-invalid-layer-state
+    gate: language-router
+    input:
+      name_status: tests/fixtures/language-routing/name-status.txt
+      language_routing: tests/fixtures/language-routing/invalid-layer-state.yaml
+    expect:
+      verdict: pass
+      exit_code: 0
+      coverage_counts:
+        supported: 0
+        stubbed: 1
+        unsupported: 3
+      file_routes:
+        - path: app/AccountService.java
+          adapter: java
+          status: stub
+          deep_analysis: not_yet_available
+        - path: app/service.py
+          adapter: unsupported
+          status: unsupported
+          deep_analysis: not_available
+        - path: cmd/server.go
+          adapter: unsupported
+          status: unsupported
+          deep_analysis: not_available
+        - path: web/app.tsx
+          adapter: unsupported
+          status: unsupported
+          deep_analysis: not_available
+      layer_errors_present: true
+
+  - name: tree-sitter-smoke
+    gate: check-tree-sitter-languages
+    expect:
+      verdict: pass
+      exit_code: 0
+      languages:
+        - java
+        - javascript
+        - typescript
+        - tsx
+      has_error:
+        - false
+        - false
+        - false
+        - false
+      versions:
+        tree-sitter: 0.26.0
+        tree-sitter-java: 0.23.5
+        tree-sitter-javascript: 0.25.0
+        tree-sitter-typescript: 0.23.2
+      deterministic_stdout: true
+
+  - name: evidence-language-coverage
+    gate: generate-change-evidence
+    input:
+      name_status: tests/fixtures/evidence-language-coverage/name-status.txt
+      numstat: tests/fixtures/evidence-language-coverage/numstat.txt
+      change_intent: tests/fixtures/evidence-language-coverage/change-intent.yaml
+      language_routing: policies/language-routing.yaml
+    expect:
+      verdict: pass
+      exit_code: 0
+      files_changed: 2
+      lines_added: 3
+      lines_removed: 1
+      changed_files:
+        - path: app/AccountService.java
+          zone_level: free
+          in_allowed_paths: true
+        - path: cmd/server.go
+          zone_level: free
+          in_allowed_paths: true
+      coverage_checked_gates:
+        - check-change-intent
+        - check-sensitive-zones
+        - language-router
+      coverage_not_checked:
+        - runtime execution paths
+        - unregistered sensitive business logic
+        - cross-commit cumulative risk
+        - non-Python semantic analysis
+        - complete dynamic obfuscation recovery
+        - deep semantic analysis unsupported for .go
+        - "java .java layers not available: callgraph"
+      verdict_statement: no governance violation detected
+      schema_keys_match_template: true
+
+  - name: evidence-language-policy-missing
+    gate: generate-change-evidence
+    input:
+      name_status: tests/fixtures/evidence-language-coverage/name-status.txt
+      numstat: tests/fixtures/evidence-language-coverage/numstat.txt
+      change_intent: tests/fixtures/evidence-language-coverage/change-intent.yaml
+      language_routing: tests/fixtures/evidence-language-coverage/missing-language-routing.yaml
+    expect:
+      verdict: blocked
+      exit_code: 1
+      files_changed: 2
+      lines_added: 3
+      lines_removed: 1
+      changed_files:
+        - path: app/AccountService.java
+          zone_level: free
+          in_allowed_paths: true
+        - path: cmd/server.go
+          zone_level: free
+          in_allowed_paths: true
+      coverage_checked_gates:
+        - check-change-intent
+        - check-sensitive-zones
+      coverage_not_checked:
+        - runtime execution paths
+        - unregistered sensitive business logic
+        - cross-commit cumulative risk
+        - non-Python semantic analysis
+        - complete dynamic obfuscation recovery
+        - "language routing policy missing: tests/fixtures/evidence-language-coverage/missing-language-routing.yaml"
+      verdict_statement: governance violation detected
+      reasons_contain:
+        - "language routing policy missing: tests/fixtures/evidence-language-coverage/missing-language-routing.yaml"
+
+  - name: expected-present
+    gate: check-change-intent
+    input:
+      name_status: tests/fixtures/expected-present/name-status.txt
+      change_intent: tests/fixtures/expected-present/change-intent.yaml
+    expect:
+      verdict: pass
+      exit_code: 0
+      expected_paths:
+        - app/required.py
+        - app/config.yaml
+      missing_expected: []
+
+  - name: expected-missing
+    gate: check-change-intent
+    input:
+      name_status: tests/fixtures/expected-missing/name-status.txt
+      change_intent: tests/fixtures/expected-missing/change-intent.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      expected_paths:
+        - vendor/foo/A.py
+      missing_expected:
+        - vendor/foo/A.py
+
+  - name: expected-empty-diff
+    gate: check-change-intent
+    input:
+      name_status: tests/fixtures/expected-empty-diff/name-status.txt
+      change_intent: tests/fixtures/expected-empty-diff/change-intent.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      expected_paths:
+        - vendor/foo/A.py
+      missing_expected:
+        - vendor/foo/A.py
+
+  - name: expected-none
+    gate: check-change-intent
+    input:
+      name_status: tests/fixtures/expected-none/name-status.txt
+      change_intent: tests/fixtures/expected-none/change-intent.yaml
+    expect:
+      verdict: pass
+      exit_code: 0
+      expected_paths: []
+      missing_expected: []
+
+  - name: evidence-expected-missing
+    gate: generate-change-evidence
+    input:
+      name_status: tests/fixtures/expected-missing/name-status.txt
+      numstat: tests/fixtures/expected-missing/numstat.txt
+      change_intent: tests/fixtures/expected-missing/change-intent.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      files_changed: 1
+      lines_added: 1
+      lines_removed: 0
+      changed_files:
+        - path: app/other.py
+          zone_level: free
+          in_allowed_paths: true
+      expected_paths:
+        - vendor/foo/A.py
+      missing_expected:
+        - vendor/foo/A.py
+      reasons_contain:
+        - missing_expected:vendor/foo/A.py
+      schema_keys_match_template: true
+
+  - name: good
+    gate: generate-change-evidence
+    input:
+      name_status: tests/fixtures/good/name-status.txt
+      numstat: tests/fixtures/good/numstat.txt
+      change_intent: tests/fixtures/good/change-intent.yaml
+    expect:
+      verdict: pass
+      exit_code: 0
+      files_changed: 1
+      lines_added: 3
+      lines_removed: 1
+      changed_files:
+        - path: app/features/search.py
+          zone_level: free
+          in_allowed_paths: true
+      coverage_checked_gates:
+        - check-change-intent
+        - check-sensitive-zones
+      coverage_not_checked:
+        - runtime execution paths
+        - unregistered sensitive business logic
+        - cross-commit cumulative risk
+        - non-Python semantic analysis
+        - complete dynamic obfuscation recovery
+      verdict_statement: no governance violation detected
+      no_safe_text: true
+      version_metadata_present: true
+      schema_keys_match_template: true
+
+  - name: evidence-function-frozen
+    gate: generate-change-evidence
+    input:
+      fixture_dir: tests/fixtures/function-gov-level/frozen-removal
+      change_intent: tests/fixtures/evidence-integration/change-intent.yaml
+    expect:
+      verdict: blocked
+      exit_code: 1
+      files_changed: 1
+      lines_added: 1
+      lines_removed: 2
+      changed_files:
+        - path: app/service.py
+          zone_level: free
+          in_allowed_paths: true
+      changed_functions:
+        - path: app/service.py
+          name: <module>
+          before_line: null
+          after_line: null
+          source: map
+        - path: app/service.py
+          name: ledger_write
+          before_line: null
+          after_line: 7
+          source: map
+        - path: app/service.py
+          name: ledger_write
+          before_line: 7
+          after_line: 7
+          source: classify_added
+        - path: app/service.py
+          name: ledger_write
+          before_line: 8
+          after_line: 8
+          source: classify_deleted
+      reasons_contain:
+        - function_frozen:app/service.py::ledger_write:base
+      coverage_checked_gates:
+        - check-change-intent
+        - check-sensitive-zones
+        - check-function-gov-level
+      coverage_not_checked:
+        - runtime execution paths
+        - unregistered sensitive business logic
+        - cross-commit cumulative risk
+        - non-Python semantic analysis
+        - complete dynamic obfuscation recovery
+      verdict_statement: governance violation detected
+      no_safe_text: true
+      version_metadata_present: true
+      schema_keys_match_template: true
+
+  - name: evidence-function-module-protected
+    gate: generate-change-evidence
+    input:
+      fixture_dir: tests/fixtures/function-gov-level/module-protected
+      change_intent: tests/fixtures/evidence-integration/change-intent.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      files_changed: 1
+      lines_added: 1
+      lines_removed: 1
+      changed_files:
+        - path: app/settings.py
+          zone_level: free
+          in_allowed_paths: true
+      changed_functions:
+        - path: app/settings.py
+          name: <module>
+          before_line: null
+          after_line: null
+          source: map
+      reasons_contain:
+        - function_protected:app/settings.py::<module>:base
+      coverage_checked_gates:
+        - check-change-intent
+        - check-sensitive-zones
+        - check-function-gov-level
+      coverage_not_checked:
+        - runtime execution paths
+        - unregistered sensitive business logic
+        - cross-commit cumulative risk
+        - non-Python semantic analysis
+        - complete dynamic obfuscation recovery
+      verdict_statement: governance review required
+      no_safe_text: true
+      version_metadata_present: true
+      schema_keys_match_template: true
+
+  - name: evidence-function-fail-closed
+    gate: generate-change-evidence
+    input:
+      fixture_dir: tests/fixtures/function-gov-level/fail-closed
+      change_intent: tests/fixtures/evidence-integration/change-intent.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      files_changed: 1
+      lines_added: 4
+      lines_removed: 1
+      changed_files:
+        - path: app/service.py
+          zone_level: free
+          in_allowed_paths: true
+      changed_functions:
+        - path: app/service.py
+          name: <module>
+          before_line: null
+          after_line: null
+          source: classify_fallback,map
+      reasons_contain:
+        - function_protected:app/service.py::<file>:head
+        - "function_analysis_error:"
+      coverage_checked_gates:
+        - check-change-intent
+        - check-sensitive-zones
+        - check-function-gov-level
+      coverage_not_checked:
+        - runtime execution paths
+        - unregistered sensitive business logic
+        - cross-commit cumulative risk
+        - non-Python semantic analysis
+        - complete dynamic obfuscation recovery
+      verdict_statement: governance review required
+      no_safe_text: true
+      version_metadata_present: true
+      schema_keys_match_template: true
+
+  - name: evidence-java-syntax-error-preauthorize
+    gate: generate-change-evidence
+    input:
+      fixture_dir: tests/fixtures/java-gov-level/syntax-error-preauthorize
+      change_intent: tests/fixtures/java-analysis-unavailable/change-intent.yaml
+      language_routing: policies/language-routing.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      files_changed: 1
+      lines_added: 4
+      lines_removed: 1
+      changed_files:
+        - path: app/AuthController.java
+          zone_level: free
+          in_allowed_paths: true
+      reasons_contain:
+        - function_protected:app/AuthController.java::AuthController.resetPassword:base
+        - function_protected:app/AuthController.java::<file>:head
+      coverage_checked_gates:
+        - check-change-intent
+        - check-sensitive-zones
+        - check-function-gov-level
+        - language-router
+      coverage_not_checked:
+        - runtime execution paths
+        - unregistered sensitive business logic
+        - cross-commit cumulative risk
+        - non-Python semantic analysis
+        - complete dynamic obfuscation recovery
+        - "java .java layers not available: callgraph"
+      verdict_statement: governance review required
+      no_safe_text: true
+      version_metadata_present: true
+      schema_keys_match_template: true
+
+  - name: evidence-error-missing-intent
+    gate: generate-change-evidence
+    input:
+      name_status: tests/fixtures/good/name-status.txt
+      numstat: tests/fixtures/good/numstat.txt
+      change_intent: tests/fixtures/evidence-error/missing-change-intent.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      files_changed: 1
+      lines_added: 3
+      lines_removed: 1
+      changed_files:
+        - path: app/features/search.py
+          zone_level: free
+          in_allowed_paths: null
+      changed_functions: []
+      intent_status: not_declared
+      reasons_contain:
+        - intent_not_declared
+      coverage_checked_gates:
+        - check-sensitive-zones
+      coverage_not_checked:
+        - "change intent path scope (intent_not_declared: no declaration; scope was not checked)"
+        - runtime execution paths
+        - unregistered sensitive business logic
+        - cross-commit cumulative risk
+        - non-Python semantic analysis
+        - complete dynamic obfuscation recovery
+      verdict_statement: governance review required
+      schema_keys_match_template: true
+
+  - name: evidence-error-missing-intent-frozen-zone
+    gate: generate-change-evidence
+    input:
+      name_status: tests/fixtures/frozen/name-status.txt
+      numstat: tests/fixtures/frozen/numstat.txt
+      change_intent: tests/fixtures/evidence-error/missing-change-intent.yaml
+    expect:
+      verdict: blocked
+      exit_code: 1
+      files_changed: 1
+      lines_added: 2
+      lines_removed: 1
+      changed_files:
+        - path: services/settlement/calculate.py
+          zone_level: frozen
+          in_allowed_paths: null
+      changed_functions: []
+      intent_status: not_declared
+      frozen_touched:
+        - services/settlement/calculate.py
+      reasons_contain:
+        - intent_not_declared
+        - frozen:services/settlement/calculate.py
+      coverage_checked_gates:
+        - check-sensitive-zones
+      coverage_not_checked:
+        - "change intent path scope (intent_not_declared: no declaration; scope was not checked)"
+        - runtime execution paths
+        - unregistered sensitive business logic
+        - cross-commit cumulative risk
+        - non-Python semantic analysis
+        - complete dynamic obfuscation recovery
+      verdict_statement: governance violation detected
+      schema_keys_match_template: true
+
+  - name: evidence-error-missing-intent-function-frozen
+    gate: generate-change-evidence
+    input:
+      fixture_dir: tests/fixtures/function-gov-level/frozen-removal
+      change_intent: tests/fixtures/evidence-error/missing-change-intent.yaml
+    expect:
+      verdict: blocked
+      exit_code: 1
+      files_changed: 1
+      lines_added: 1
+      lines_removed: 2
+      changed_files:
+        - path: app/service.py
+          zone_level: free
+          in_allowed_paths: null
+      changed_functions:
+        - path: app/service.py
+          name: <module>
+          before_line: null
+          after_line: null
+          source: map
+        - path: app/service.py
+          name: ledger_write
+          before_line: null
+          after_line: 7
+          source: map
+        - path: app/service.py
+          name: ledger_write
+          before_line: 7
+          after_line: 7
+          source: classify_added
+        - path: app/service.py
+          name: ledger_write
+          before_line: 8
+          after_line: 8
+          source: classify_deleted
+      intent_status: not_declared
+      reasons_contain:
+        - intent_not_declared
+        - function_frozen:app/service.py::ledger_write:base
+      coverage_checked_gates:
+        - check-sensitive-zones
+        - check-function-gov-level
+      coverage_not_checked:
+        - "change intent path scope (intent_not_declared: no declaration; scope was not checked)"
+        - runtime execution paths
+        - unregistered sensitive business logic
+        - cross-commit cumulative risk
+        - non-Python semantic analysis
+        - complete dynamic obfuscation recovery
+      verdict_statement: governance violation detected
+      schema_keys_match_template: true
+
+  - name: out-of-scope
+    gate: check-change-intent
+    input:
+      name_status: tests/fixtures/out-of-scope/name-status.txt
+      change_intent: tests/fixtures/out-of-scope/change-intent.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      out_of_scope_paths:
+        - docs/release-notes.md
+
+  - name: forbidden
+    gate: check-change-intent
+    input:
+      name_status: tests/fixtures/forbidden/name-status.txt
+      change_intent: tests/fixtures/forbidden/change-intent.yaml
+    expect:
+      verdict: blocked
+      exit_code: 1
+      forbidden_touched:
+        - secrets/prod.key
+
+  - name: broad-intent-root
+    gate: check-change-intent
+    input:
+      fixture_dir: tests/fixtures/broad-intent-root
+      change_intent: tests/fixtures/broad-intent-root/change-intent.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      scope_too_broad: true
+      scope_too_broad_reasons:
+        - root_scope_glob
+        - top_level_coverage
+      scope_top_level_dir_count: 8
+      scope_coverage_percent: 100
+      scope_covered_top_level_dirs:
+        - .harness
+        - app
+        - collab
+        - docs
+        - policies
+        - scripts
+        - summaries
+        - templates
+
+  - name: broad-intent-coverage
+    gate: check-change-intent
+    input:
+      fixture_dir: tests/fixtures/broad-intent-coverage
+      change_intent: tests/fixtures/broad-intent-coverage/change-intent.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      scope_too_broad: true
+      scope_too_broad_reasons:
+        - top_level_coverage
+      scope_top_level_dir_count: 8
+      scope_coverage_percent: 87
+      scope_covered_top_level_dirs:
+        - .harness
+        - collab
+        - docs
+        - policies
+        - scripts
+        - summaries
+        - templates
+
+  - name: broad-intent-normal-wide
+    gate: check-change-intent
+    input:
+      fixture_dir: tests/fixtures/broad-intent-normal-wide
+      change_intent: tests/fixtures/broad-intent-normal-wide/change-intent.yaml
+    expect:
+      verdict: pass
+      exit_code: 0
+      scope_too_broad: false
+      scope_top_level_dir_count: 8
+      scope_coverage_percent: 75
+      scope_covered_top_level_dirs:
+        - .harness
+        - collab
+        - docs
+        - policies
+        - scripts
+        - summaries
+
+  - name: frozen
+    gate: check-sensitive-zones
+    input:
+      name_status: tests/fixtures/frozen/name-status.txt
+    expect:
+      verdict: blocked
+      exit_code: 1
+      frozen_touched:
+        - services/settlement/calculate.py
+
+  - name: protected
+    gate: check-sensitive-zones
+    input:
+      name_status: tests/fixtures/protected/name-status.txt
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      protected_touched:
+        - services/auth/login.py
+      required_approval:
+        - security-reviewer
+
+  - name: watched
+    gate: check-sensitive-zones
+    input:
+      name_status: tests/fixtures/watched/name-status.txt
+    expect:
+      verdict: pass
+      exit_code: 0
+      watched_touched:
+        - lib/common/helpers.py
+
+  - name: maturity-zone-shadow-pass
+    gate: check-sensitive-zones
+    input:
+      name_status: tests/fixtures/maturity/shadow-name-status.txt
+      policy: tests/fixtures/maturity/sensitive-zones.yaml
+    expect:
+      verdict: pass
+      exit_code: 0
+      protected_touched: []
+      shadow_hits:
+        - app/shadow/pay.py
+
+  - name: maturity-zone-enforcing-approval
+    gate: check-sensitive-zones
+    input:
+      name_status: tests/fixtures/maturity/enforcing-name-status.txt
+      policy: tests/fixtures/maturity/sensitive-zones.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      protected_touched:
+        - app/enforcing/pay.py
+      shadow_hits: []
+
+  - name: maturity-zone-invalid-enforcing
+    gate: check-sensitive-zones
+    input:
+      name_status: tests/fixtures/maturity/invalid-name-status.txt
+      policy: tests/fixtures/maturity/invalid-sensitive-zones.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      protected_touched:
+        - app/invalid/pay.py
+      errors_present: true
+
+  - name: evidence-zone-shadow-hit
+    gate: generate-change-evidence
+    input:
+      name_status: tests/fixtures/maturity/shadow-name-status.txt
+      numstat: tests/fixtures/maturity/shadow-numstat.txt
+      change_intent: tests/fixtures/maturity/change-intent.yaml
+      policy: tests/fixtures/maturity/sensitive-zones.yaml
+    expect:
+      verdict: pass
+      exit_code: 0
+      files_changed: 1
+      lines_added: 1
+      lines_removed: 1
+      changed_files:
+        - path: app/shadow/pay.py
+          zone_level: protected
+          in_allowed_paths: true
+      shadow_hits:
+        - app/shadow/pay.py
+
+  - name: python-inventory
+    gate: extract-python-inventory
+    input:
+      source_file: tests/fixtures/python-inventory/valid.py
+    expect:
+      exit_code: 0
+      lang: python
+      parse_error: null
+      common_ir_fields: true
+      items:
+        - type: function
+          name: decorator
+          start_line: 1
+          end_line: 4
+          signature_start_line: 1
+          signature: decorator
+          decorators: []
+          annotations: []
+        - type: function
+          name: decorator.wrapper
+          start_line: 2
+          end_line: 3
+          signature_start_line: 2
+          signature: decorator.wrapper
+          decorators: []
+          annotations: []
+        - type: function
+          name: outer
+          start_line: 6
+          end_line: 9
+          signature_start_line: 6
+          signature: outer
+          decorators: []
+          annotations: []
+        - type: function
+          name: outer.inner
+          start_line: 7
+          end_line: 8
+          signature_start_line: 7
+          signature: outer.inner
+          decorators: []
+          annotations: []
+        - type: class
+          name: Service
+          start_line: 11
+          end_line: 18
+          signature_start_line: 11
+          signature: Service
+          decorators: []
+          annotations: []
+        - type: async_function
+          name: Service.load
+          start_line: 13
+          end_line: 14
+          signature_start_line: 12
+          signature: Service.load
+          decorators:
+            - decorator
+          annotations:
+            - decorator
+        - type: class
+          name: Service.Nested
+          start_line: 16
+          end_line: 18
+          signature_start_line: 16
+          signature: Service.Nested
+          decorators: []
+          annotations: []
+        - type: function
+          name: Service.Nested.method
+          start_line: 17
+          end_line: 18
+          signature_start_line: 17
+          signature: Service.Nested.method
+          decorators: []
+          annotations: []
+        - type: function
+          name: decorated
+          start_line: 21
+          end_line: 22
+          signature_start_line: 20
+          signature: decorated
+          decorators:
+            - decorator
+          annotations:
+            - decorator
+
+  - name: python-inventory-parse-error
+    gate: extract-python-inventory
+    input:
+      source_file: tests/fixtures/python-inventory/invalid.py
+    expect:
+      exit_code: 0
+      parse_error_present: true
+      items: []
+
+  - name: java-inventory
+    gate: extract-java-inventory
+    input:
+      source_file: tests/fixtures/java-inventory/valid.java
+    expect:
+      exit_code: 0
+      lang: java
+      parse_error: null
+      common_ir_fields: true
+      items:
+        - type: class
+          name: AccountService
+          start_line: 4
+          end_line: 22
+          signature_start_line: 3
+          signature: "@Service class AccountService"
+          annotations:
+            - Service
+        - type: method
+          name: AccountService.transfer
+          start_line: 6
+          end_line: 8
+          signature_start_line: 5
+          signature: "@Transactional public void transfer(String from, String to)"
+          annotations:
+            - Transactional
+        - type: method
+          name: AccountService.transfer
+          start_line: 10
+          end_line: 11
+          signature_start_line: 10
+          signature: "public void transfer(String account)"
+          annotations: []
+        - type: class
+          name: AccountService.Inner
+          start_line: 13
+          end_line: 21
+          signature_start_line: 13
+          signature: "class Inner"
+          annotations: []
+        - type: constructor
+          name: AccountService.Inner.<init>
+          start_line: 15
+          end_line: 16
+          signature_start_line: 14
+          signature: "@Secured(\"ADMIN\") Inner(int id)"
+          annotations:
+            - Secured
+        - type: method
+          name: AccountService.Inner.status
+          start_line: 18
+          end_line: 20
+          signature_start_line: 18
+          signature: "String status()"
+          annotations: []
+
+  - name: java-inventory-parse-error
+    gate: extract-java-inventory
+    input:
+      source_file: tests/fixtures/java-inventory/invalid.java
+    expect:
+      exit_code: 0
+      parse_error_present: true
+      items: []
+
+  - name: java-inventory-unreadable
+    gate: extract-java-inventory
+    input:
+      source_file: tests/fixtures/java-inventory/non_utf8.java
+    expect:
+      exit_code: 0
+      parse_error_present: true
+      items: []
+
+  - name: java-inventory-analysis-unavailable
+    gate: extract-java-inventory
+    env:
+      PYTHONPATH: tests/fixtures/java-analysis-unavailable/shims
+    input:
+      source_file: tests/fixtures/java-inventory/valid.java
+    expect:
+      exit_code: 0
+      parse_error_present: true
+      items: []
+
+  - name: function-mapping
+    gate: map-diff-to-functions
+    input:
+      fixture_dir: tests/fixtures/function-mapping
+    expect:
+      exit_code: 0
+      files:
+        - path: app/non_utf8.py
+          status: M
+          touched_function_names:
+            - <module>
+          hunk_function_names:
+            - [<module>]
+        - path: app/sample.py
+          status: M
+          touched_function_names:
+            - secure_view
+            - outer
+            - outer.inner
+            - <module>
+            - Service
+            - Service.method
+            - remove_me
+          hunk_function_names:
+            - [secure_view]
+            - [outer, outer.inner]
+            - [<module>]
+            - [Service, Service.method]
+            - [remove_me]
+        - path: app/sibling.py
+          status: M
+          touched_function_names:
+            - transfer
+          hunk_function_names:
+            - [transfer]
+
+  - name: java-function-mapping
+    gate: map-diff-to-functions
+    input:
+      fixture_dir: tests/fixtures/java-function-mapping
+    expect:
+      exit_code: 0
+      files:
+        - path: app/AccountService.java
+          status: M
+          touched_function_names:
+            - AccountService
+            - AccountService.transfer
+          hunk_function_names:
+            - [AccountService, AccountService.transfer]
+            - [AccountService, AccountService.transfer]
+
+  - name: java-inventory-override-ignored-without-test-flag
+    gate: map-diff-to-functions
+    env:
+      ACGH_JAVA_INVENTORY_PATH: tests/fixtures/java-gate-missing/no-such-gate.py
+    input:
+      fixture_dir: tests/fixtures/java-function-mapping
+    expect:
+      exit_code: 0
+      coverage:
+        - "ignored ACGH_JAVA_INVENTORY_PATH override because ACGH_ALLOW_TEST_OVERRIDES=1 was not set"
+      files:
+        - path: app/AccountService.java
+          status: M
+          touched_function_names:
+            - AccountService
+            - AccountService.transfer
+          hunk_function_names:
+            - [AccountService, AccountService.transfer]
+            - [AccountService, AccountService.transfer]
+
+  - name: java-function-classification
+    gate: classify-python-function-changes
+    input:
+      fixture_dir: tests/fixtures/java-function-mapping
+    expect:
+      exit_code: 0
+      files:
+        - path: app/AccountService.java
+          status: M
+          fallback: false
+          fallback_reason: null
+          parse_error_present: false
+          function_changes:
+            - name: AccountService
+              type: class
+              change_type: modified
+              signature_changed: false
+              body_changed: true
+            - name: AccountService.transfer
+              type: method
+              change_type: modified
+              signature_changed: true
+              body_changed: true
+
+  - name: java-analysis-unavailable-function-mapping
+    gate: map-diff-to-functions
+    env:
+      PYTHONPATH: tests/fixtures/java-analysis-unavailable/shims
+    input:
+      fixture_dir: tests/fixtures/java-analysis-unavailable/mixed
+    expect:
+      exit_code: 0
+      files:
+        - path: app/AccountService.java
+          status: M
+          parse_error_present: true
+          touched_function_names:
+            - <module>
+          hunk_function_names:
+            - [<module>]
+        - path: app/calc.py
+          status: M
+          parse_error_present: false
+          touched_function_names:
+            - calc
+          hunk_function_names:
+            - [calc]
+
+  - name: java-analysis-unavailable-function-classification
+    gate: classify-python-function-changes
+    env:
+      PYTHONPATH: tests/fixtures/java-analysis-unavailable/shims
+    input:
+      fixture_dir: tests/fixtures/java-analysis-unavailable/mixed
+    expect:
+      exit_code: 0
+      files:
+        - path: app/AccountService.java
+          status: M
+          fallback: true
+          fallback_reason: parse_error
+          parse_error_present: true
+          function_changes:
+            - name: <file>
+              type: file
+              change_type: file_fallback
+              signature_changed: false
+              body_changed: false
+        - path: app/calc.py
+          status: M
+          fallback: false
+          fallback_reason: null
+          parse_error_present: false
+          function_changes:
+            - name: calc
+              type: function
+              change_type: modified
+              signature_changed: false
+              body_changed: true
+
+  - name: java-gate-missing-function-mapping
+    gate: map-diff-to-functions
+    env:
+      ACGH_ALLOW_TEST_OVERRIDES: "1"
+      ACGH_JAVA_INVENTORY_PATH: tests/fixtures/java-gate-missing/no-such-gate.py
+    input:
+      fixture_dir: tests/fixtures/java-gate-missing/mixed
+    expect:
+      exit_code: 0
+      files:
+        - path: app/AccountService.java
+          status: M
+          parse_error_present: true
+          touched_function_names:
+            - <module>
+          hunk_function_names:
+            - [<module>]
+        - path: app/calc.py
+          status: M
+          parse_error_present: false
+          touched_function_names:
+            - calc
+          hunk_function_names:
+            - [calc]
+
+  - name: java-gate-missing-function-classification
+    gate: classify-python-function-changes
+    env:
+      ACGH_ALLOW_TEST_OVERRIDES: "1"
+      ACGH_JAVA_INVENTORY_PATH: tests/fixtures/java-gate-missing/no-such-gate.py
+    input:
+      fixture_dir: tests/fixtures/java-gate-missing/mixed
+    expect:
+      exit_code: 0
+      files:
+        - path: app/AccountService.java
+          status: M
+          fallback: true
+          fallback_reason: parse_error
+          parse_error_present: true
+          function_changes:
+            - name: <file>
+              type: file
+              change_type: file_fallback
+              signature_changed: false
+              body_changed: false
+        - path: app/calc.py
+          status: M
+          fallback: false
+          fallback_reason: null
+          parse_error_present: false
+          function_changes:
+            - name: calc
+              type: function
+              change_type: modified
+              signature_changed: false
+              body_changed: true
+
+  - name: java-analysis-unavailable-evidence-coverage
+    gate: generate-change-evidence
+    env:
+      PYTHONPATH: tests/fixtures/java-analysis-unavailable/shims
+    input:
+      fixture_dir: tests/fixtures/java-analysis-unavailable/java-only
+      change_intent: tests/fixtures/java-analysis-unavailable/change-intent.yaml
+      language_routing: policies/language-routing.yaml
+    expect:
+      verdict: pass
+      exit_code: 0
+      files_changed: 1
+      lines_added: 1
+      lines_removed: 1
+      changed_files:
+        - path: app/AccountService.java
+          zone_level: free
+          in_allowed_paths: true
+      coverage_not_checked:
+        - runtime execution paths
+        - unregistered sensitive business logic
+        - cross-commit cumulative risk
+        - non-Python semantic analysis
+        - complete dynamic obfuscation recovery
+        - "java gov_level analysis unavailable for app/AccountService.java: java analysis unavailable: simulated tree-sitter import failure"
+        - "java .java layers not available: callgraph"
+      verdict_statement: no governance violation detected
+
+  - name: function-classification
+    gate: classify-python-function-changes
+    input:
+      fixture_dir: tests/fixtures/function-classification
+    expect:
+      exit_code: 0
+      files:
+        - path: README.md
+          status: M
+          fallback: true
+          fallback_reason: unsupported_language
+          parse_error_present: false
+          function_changes:
+            - name: <file>
+              type: file
+              change_type: file_fallback
+              signature_changed: false
+              body_changed: false
+        - path: app/changes.py
+          status: M
+          fallback: false
+          fallback_reason: null
+          parse_error_present: false
+          function_changes:
+            - name: Account
+              type: class
+              change_type: modified
+              signature_changed: false
+              body_changed: true
+            - name: Account.balance
+              type: function
+              change_type: modified
+              signature_changed: false
+              body_changed: true
+            - name: added
+              type: function
+              change_type: added
+              signature_changed: false
+              body_changed: false
+            - name: body_only
+              type: function
+              change_type: modified
+              signature_changed: false
+              body_changed: true
+            - name: outer
+              type: function
+              change_type: modified
+              signature_changed: false
+              body_changed: true
+            - name: outer.inner
+              type: function
+              change_type: modified
+              signature_changed: false
+              body_changed: true
+            - name: remove_me
+              type: function
+              change_type: deleted
+              signature_changed: false
+              body_changed: false
+            - name: signature_change
+              type: function
+              change_type: modified
+              signature_changed: true
+              body_changed: true
+        - path: app/companion.py
+          status: M
+          fallback: false
+          fallback_reason: null
+          parse_error_present: false
+          function_changes:
+            - name: companion
+              type: function
+              change_type: modified
+              signature_changed: false
+              body_changed: true
+        - path: app/deleted_file.py
+          status: D
+          fallback: true
+          fallback_reason: file_added_or_deleted
+          parse_error_present: false
+          function_changes:
+            - name: <file>
+              type: file
+              change_type: file_fallback
+              signature_changed: false
+              body_changed: false
+        - path: app/new_file.py
+          status: A
+          fallback: true
+          fallback_reason: file_added_or_deleted
+          parse_error_present: false
+          function_changes:
+            - name: <file>
+              type: file
+              change_type: file_fallback
+              signature_changed: false
+              body_changed: false
+        - path: app/non_utf8.py
+          status: M
+          fallback: true
+          fallback_reason: unreadable
+          parse_error_present: true
+          function_changes:
+            - name: <file>
+              type: file
+              change_type: file_fallback
+              signature_changed: false
+              body_changed: false
+        - path: app/parse_error.py
+          status: M
+          fallback: true
+          fallback_reason: parse_error
+          parse_error_present: true
+          function_changes:
+            - name: <file>
+              type: file
+              change_type: file_fallback
+              signature_changed: false
+              body_changed: false
+        - path: app/pure_rename_source.py
+          status: D
+          fallback: true
+          fallback_reason: file_added_or_deleted
+          parse_error_present: false
+          function_changes:
+            - name: <file>
+              type: file
+              change_type: file_fallback
+              signature_changed: false
+              body_changed: false
+        - path: app/pure_rename_target.py
+          status: A
+          fallback: true
+          fallback_reason: file_added_or_deleted
+          parse_error_present: false
+          function_changes:
+            - name: <file>
+              type: file
+              change_type: file_fallback
+              signature_changed: false
+              body_changed: false
+        - path: app/renamed_source.py
+          status: D
+          fallback: true
+          fallback_reason: file_added_or_deleted
+          parse_error_present: false
+          function_changes:
+            - name: <file>
+              type: file
+              change_type: file_fallback
+              signature_changed: false
+              body_changed: false
+        - path: app/renamed_target.py
+          status: A
+          fallback: true
+          fallback_reason: file_added_or_deleted
+          parse_error_present: false
+          function_changes:
+            - name: <file>
+              type: file
+              change_type: file_fallback
+              signature_changed: false
+              body_changed: false
+
+  - name: gov-annotations
+    gate: extract-gov-annotations
+    input:
+      source_file: tests/fixtures/gov-annotations/valid.py
+    expect:
+      exit_code: 0
+      deterministic_md5: true
+      annotations:
+        - name: audit_async
+          type: async_function
+          order_key: 0
+          level: watched
+          effective_level: watched
+          errors: []
+          unresolved: false
+          decorators: [gov]
+        - name: LedgerWriter
+          type: class
+          order_key: 0
+          level: frozen
+          effective_level: frozen
+          errors: []
+          unresolved: false
+          decorators: [gov]
+        - name: LedgerWriter.commit
+          type: function
+          order_key: 0
+          level: watched
+          effective_level: frozen
+          errors: []
+          unresolved: false
+          decorators: [gov]
+        - name: LedgerWriter.inherited
+          type: function
+          order_key: 0
+          level: null
+          effective_level: frozen
+          errors: []
+          unresolved: false
+          decorators: []
+        - name: Account.balance
+          type: function
+          order_key: 1
+          level: protected
+          effective_level: protected
+          errors: []
+          unresolved: false
+          decorators: [balance.setter, gov]
+        - name: parse
+          type: function
+          order_key: 0
+          level: watched
+          effective_level: watched
+          errors: []
+          unresolved: false
+          decorators: [overload, gov]
+        - name: conditional
+          type: function
+          order_key: 0
+          level: protected
+          effective_level: protected
+          errors: []
+          unresolved: false
+          decorators: [gov]
+        - name: outer.inner
+          type: function
+          order_key: 0
+          level: protected
+          effective_level: protected
+          errors: []
+          unresolved: false
+          decorators: [gov]
+        - name: duplicate_gov
+          type: function
+          order_key: 0
+          level: frozen
+          effective_level: frozen
+          errors: [duplicate]
+          unresolved: false
+          decorators: [gov, gov]
+        - name: duplicate_field_gov
+          type: function
+          order_key: 0
+          level: frozen
+          effective_level: frozen
+          errors: [duplicate]
+          unresolved: false
+          decorators: [gov]
+        - name: invalid_level_case
+          type: function
+          order_key: 0
+          level: protected
+          effective_level: protected
+          errors: [invalid_level]
+          unresolved: false
+          decorators: [gov]
+        - name: unresolved_case
+          type: function
+          order_key: 0
+          level: protected
+          effective_level: protected
+          errors: [unresolved]
+          unresolved: true
+          decorators: [gov]
+        - name: missing_reason_case
+          type: function
+          order_key: 0
+          level: protected
+          effective_level: protected
+          errors: [missing_reason]
+          unresolved: false
+          decorators: [gov]
+        - name: unknown_field_case
+          type: function
+          order_key: 0
+          level: protected
+          effective_level: protected
+          errors: [unknown_field]
+          unresolved: false
+          decorators: [gov]
+        - name: positional_case
+          type: function
+          order_key: 0
+          level: protected
+          effective_level: protected
+          errors: [invalid_syntax, missing_level]
+          unresolved: true
+          decorators: [gov]
+
+  - name: gov-annotations-module
+    gate: extract-gov-annotations
+    input:
+      source_file: tests/fixtures/gov-annotations/module.py
+    expect:
+      exit_code: 0
+      module:
+        level: protected
+        reason: module constants
+        line: 1
+        errors: []
+      annotations:
+        - name: module_touched
+          type: function
+          order_key: 0
+          level: null
+          effective_level: protected
+          errors: []
+          unresolved: false
+          decorators: []
+
+  - name: gov-annotations-module-duplicate
+    gate: extract-gov-annotations
+    input:
+      source_file: tests/fixtures/gov-annotations/module_duplicate.py
+    expect:
+      exit_code: 0
+      module:
+        level: frozen
+        reason: duplicate level field
+        line: 1
+        errors: [invalid_module_gov]
+      annotations:
+        - name: module_duplicate_touched
+          type: function
+          order_key: 0
+          level: null
+          effective_level: frozen
+          errors: []
+          unresolved: false
+          decorators: []
+
+  - name: gov-annotations-module-annassign
+    gate: extract-gov-annotations
+    input:
+      source_file: tests/fixtures/gov-annotations/module_annassign.py
+    expect:
+      exit_code: 0
+      module:
+        level: frozen
+        reason: annotated module gov
+        line: 1
+        errors: []
+      annotations:
+        - name: module_annassign_touched
+          type: function
+          order_key: 0
+          level: null
+          effective_level: frozen
+          errors: []
+          unresolved: false
+          decorators: []
+
+  - name: gov-annotations-module-invalid-binding
+    gate: extract-gov-annotations
+    input:
+      source_file: tests/fixtures/gov-annotations/module_invalid_binding.py
+    expect:
+      exit_code: 0
+      module:
+        level: protected
+        reason: null
+        line: 2
+        errors: [invalid_module_gov]
+      annotations:
+        - name: module_invalid_binding_touched
+          type: function
+          order_key: 0
+          level: null
+          effective_level: protected
+          errors: []
+          unresolved: false
+          decorators: []
+
+  - name: gov-annotations-parse-error
+    gate: extract-gov-annotations
+    input:
+      source_file: tests/fixtures/gov-annotations/invalid.py
+    expect:
+      exit_code: 0
+      parse_error_present: true
+      annotation_count: 0
+
+  - name: gov-annotations-unreadable
+    gate: extract-gov-annotations
+    input:
+      source_file: tests/fixtures/function-classification/base/app/non_utf8.py
+    expect:
+      exit_code: 0
+      unreadable_present: true
+      annotation_count: 0
+
+  - name: function-gov-frozen-removal
+    gate: check-function-gov-level
+    input:
+      fixture_dir: tests/fixtures/function-gov-level/frozen-removal
+    expect:
+      verdict: blocked
+      exit_code: 1
+      frozen_touched:
+        - path: app/service.py
+          name: ledger_write
+          level: frozen
+          side: base
+          errors: []
+
+  - name: function-gov-protected-invalid
+    gate: check-function-gov-level
+    input:
+      fixture_dir: tests/fixtures/function-gov-level/protected-invalid
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      protected_touched:
+        - path: app/service.py
+          name: check_auth
+          level: protected
+          side: base
+          errors: []
+        - path: app/service.py
+          name: check_auth
+          level: protected
+          side: head
+          errors: []
+        - path: app/service.py
+          name: invalid_annotation
+          level: protected
+          side: base
+          errors: [missing_reason]
+        - path: app/service.py
+          name: invalid_annotation
+          level: protected
+          side: head
+          errors: [missing_reason]
+      watched_touched:
+        - path: app/service.py
+          name: invalid_annotation
+          level: watched
+          side: base
+          errors: [missing_reason]
+        - path: app/service.py
+          name: invalid_annotation
+          level: watched
+          side: head
+          errors: [missing_reason]
+
+  - name: function-gov-watched-pass
+    gate: check-function-gov-level
+    input:
+      fixture_dir: tests/fixtures/function-gov-level/watched-pass
+    expect:
+      verdict: pass
+      exit_code: 0
+      deterministic_stdout: true
+      watched_touched:
+        - path: app/service.py
+          name: normalize
+          level: watched
+          side: base
+          errors: []
+        - path: app/service.py
+          name: normalize
+          level: watched
+          side: head
+          errors: []
+
+  - name: function-gov-module-protected
+    gate: check-function-gov-level
+    input:
+      fixture_dir: tests/fixtures/function-gov-level/module-protected
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      protected_touched:
+        - path: app/settings.py
+          name: <module>
+          level: protected
+          side: base
+          errors: []
+        - path: app/settings.py
+          name: <module>
+          level: protected
+          side: head
+          errors: []
+
+  - name: function-gov-fail-closed
+    gate: check-function-gov-level
+    input:
+      fixture_dir: tests/fixtures/function-gov-level/fail-closed
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      errors_present: true
+      protected_touched:
+        - path: app/service.py
+          name: <file>
+          level: protected
+          side: head
+          errors: [fail_closed]
+
+  - name: function-gov-deleted-frozen
+    gate: check-function-gov-level
+    input:
+      fixture_dir: tests/fixtures/function-gov-level/deleted-frozen
+    expect:
+      verdict: blocked
+      exit_code: 1
+      errors_present: true
+      frozen_touched:
+        - path: app/service.py
+          name: <file>
+          level: frozen
+          side: head
+          errors: [fail_closed]
+
+  - name: function-gov-unreadable-head-laundering
+    gate: check-function-gov-level
+    input:
+      fixture_dir: tests/fixtures/function-gov-level/unreadable-head-laundering
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      errors_present: true
+      protected_touched:
+        - path: app/mystery.py
+          name: <file>
+          level: protected
+          side: head
+          errors: [fail_closed]
+
+  - name: function-gov-unreadable-base-laundering
+    gate: check-function-gov-level
+    input:
+      fixture_dir: tests/fixtures/function-gov-level/unreadable-base-laundering
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      errors_present: true
+      protected_touched:
+        - path: app/legacy.py
+          name: <file>
+          level: protected
+          side: base
+          errors: [fail_closed]
+
+  - name: function-gov-plain-delete-pass
+    gate: check-function-gov-level
+    input:
+      fixture_dir: tests/fixtures/function-gov-level/plain-delete-pass
+    expect:
+      verdict: pass
+      exit_code: 0
+      errors_present: false
+
+  - name: function-gov-python-syntax-error-protected
+    gate: check-function-gov-level
+    group: parity
+    input:
+      fixture_dir: tests/fixtures/function-gov-level/syntax-error-protected
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      errors_present: true
+      protected_touched:
+        - path: app/service.py
+          name: <file>
+          level: protected
+          side: head
+          errors: [fail_closed]
+
+  - name: java-gov-declared-frozen
+    gate: check-function-gov-level
+    group: parity
+    input:
+      fixture_dir: tests/fixtures/java-gov-level/gov-frozen
+    expect:
+      verdict: blocked
+      exit_code: 1
+      frozen_touched:
+        - path: app/LedgerService.java
+          name: LedgerService.writeEntry
+          level: frozen
+          side: base
+          errors: []
+        - path: app/LedgerService.java
+          name: LedgerService.writeEntry
+          level: frozen
+          side: head
+          errors: []
+
+  - name: parity-python-gov-frozen
+    gate: check-function-gov-level
+    group: parity
+    input:
+      fixture_dir: tests/fixtures/function-gov-level/frozen-removal
+    expect:
+      verdict: blocked
+      exit_code: 1
+      frozen_touched:
+        - path: app/service.py
+          name: ledger_write
+          level: frozen
+          side: base
+          errors: []
+
+  - name: java-gov-syntax-error-preauthorize
+    gate: check-function-gov-level
+    group: parity
+    input:
+      fixture_dir: tests/fixtures/java-gov-level/syntax-error-preauthorize
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      errors_present: true
+      protected_touched:
+        - path: app/AuthController.java
+          name: <file>
+          level: protected
+          side: head
+          errors: [fail_closed]
+        - path: app/AuthController.java
+          name: AuthController.resetPassword
+          level: protected
+          side: base
+          errors: []
+
+  - name: java-spring-preauthorize-removal
+    gate: check-function-gov-level
+    input:
+      fixture_dir: tests/fixtures/java-gov-level/preauthorize-removal
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      protected_touched:
+        - path: app/AuthController.java
+          name: AuthController.resetPassword
+          level: protected
+          side: base
+          errors: []
+
+  - name: java-spring-transactional-watched
+    gate: check-function-gov-level
+    input:
+      fixture_dir: tests/fixtures/java-gov-level/transactional-watched
+    expect:
+      verdict: pass
+      exit_code: 0
+      watched_touched:
+        - path: app/PaymentService.java
+          name: PaymentService.refreshCache
+          level: watched
+          side: base
+          errors: []
+        - path: app/PaymentService.java
+          name: PaymentService.refreshCache
+          level: watched
+          side: head
+          errors: []
+
+  - name: java-spring-native-query-protected
+    gate: check-function-gov-level
+    input:
+      fixture_dir: tests/fixtures/java-gov-level/native-query
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      protected_touched:
+        - path: app/AccountRepository.java
+          name: AccountRepository.rewriteBalance
+          level: protected
+          side: base
+          errors: []
+        - path: app/AccountRepository.java
+          name: AccountRepository.rewriteBalance
+          level: protected
+          side: head
+          errors: []
+
+  - name: java-spring-fqn-preauthorize
+    gate: check-function-gov-level
+    input:
+      fixture_dir: tests/fixtures/java-gov-level/fqn-preauthorize
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      protected_touched:
+        - path: app/Guard.java
+          name: Guard.enforce
+          level: protected
+          side: base
+          errors: []
+        - path: app/Guard.java
+          name: Guard.enforce
+          level: protected
+          side: head
+          errors: []
+
+  - name: java-spring-jpql-query-pass
+    gate: check-function-gov-level
+    input:
+      fixture_dir: tests/fixtures/java-gov-level/jpql-query-pass
+    expect:
+      verdict: pass
+      exit_code: 0
+      errors_present: false
+
+  - name: java-gov-invalid-approval
+    gate: check-function-gov-level
+    input:
+      fixture_dir: tests/fixtures/java-gov-level/invalid-gov
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      protected_touched:
+        - path: app/InvalidGov.java
+          name: InvalidGov.guarded
+          level: protected
+          side: base
+          errors: [missing_reason, unresolved]
+        - path: app/InvalidGov.java
+          name: InvalidGov.guarded
+          level: protected
+          side: head
+          errors: [missing_reason, unresolved]
+
+  - name: java-framework-policy-missing
+    gate: check-function-gov-level
+    input:
+      fixture_dir: tests/fixtures/java-gov-level/missing-framework-policy
+      framework_annotations: tests/fixtures/java-gov-level/missing-framework-policy/no-such-policy.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      errors_present: true
+      protected_touched:
+        - path: <unknown>
+          name: <file>
+          level: protected
+          side: head
+          errors: [fail_closed]
+
+  - name: python-capabilities
+    gate: extract-python-capabilities
+    input:
+      source_file: tests/fixtures/capabilities/valid.py
+    expect:
+      exit_code: 0
+      deterministic_stdout: true
+      unresolved_dynamic:
+        - kind: star_import
+          module: subprocess
+          line: 3
+      errors: []
+      capabilities:
+        - id: crypto_primitive
+          level: protected
+          signals:
+            - kind: import
+              line: 7
+              name: ssl
+            - kind: import
+              line: 8
+              name: hmac
+            - kind: call
+              line: 48
+              name: hmac.new
+            - kind: call
+              line: 49
+              name: ssl.wrap_socket
+        - id: dynamic_code_exec
+          level: protected
+          signals:
+            - kind: builtin
+              line: 26
+              name: __import__
+            - kind: builtin
+              line: 30
+              name: exec
+            - kind: builtin
+              line: 31
+              name: eval
+            - kind: call
+              line: 54
+              name: importlib.import_module
+            - kind: dynamic_import
+              line: 54
+              name: importlib.import_module
+        - id: outbound_network
+          level: protected
+          signals:
+            - kind: import
+              line: 6
+              name: requests
+            - kind: call
+              line: 44
+              name: urllib.request.urlopen
+        - id: subprocess_exec
+          level: protected
+          signals:
+            - kind: import
+              line: 1
+              name: subprocess
+            - kind: import
+              line: 2
+              name: subprocess
+            - kind: star_import
+              line: 3
+              name: subprocess
+            - kind: import
+              line: 4
+              name: subprocess
+            - kind: call
+              line: 14
+              name: subprocess.run
+            - kind: call
+              line: 18
+              name: subprocess.run
+            - kind: call
+              line: 22
+              name: subprocess.run
+            - kind: dynamic_import
+              line: 26
+              name: subprocess
+            - kind: call
+              line: 59
+              name: os.system
+            - kind: call
+              line: 65
+              name: os.system
+            - kind: call
+              line: 71
+              name: os.system
+            - kind: call
+              line: 77
+              name: os.system
+        - id: unsafe_deserialization
+          level: protected
+          signals:
+            - kind: import
+              line: 5
+              name: pickle
+            - kind: import
+              line: 35
+              name: pickle
+            - kind: call
+              line: 36
+              name: pickle.loads
+            - kind: call
+              line: 40
+              name: yaml.load
+
+  - name: python-capabilities-invalid-policy
+    gate: extract-python-capabilities
+    input:
+      source_file: tests/fixtures/capabilities/valid.py
+      policy: tests/fixtures/capabilities/frozen-policy.yaml
+    expect:
+      exit_code: 0
+      unresolved_dynamic:
+        - kind: star_import
+          module: subprocess
+          line: 3
+      errors:
+        - error: invalid_capability_level
+          id: forbidden_test
+          level: frozen
+        - error: unknown_signal_kind
+          id: forbidden_test
+          kind: mystery
+      capabilities:
+        - id: forbidden_test
+          level: protected
+          signals:
+            - kind: import
+              line: 1
+              name: subprocess
+            - kind: import
+              line: 2
+              name: subprocess
+            - kind: star_import
+              line: 3
+              name: subprocess
+            - kind: import
+              line: 4
+              name: subprocess
+            - kind: dynamic_import
+              line: 26
+              name: subprocess
+
+  - name: python-capabilities-dynamic-exact
+    gate: extract-python-capabilities
+    input:
+      source_file: tests/fixtures/capabilities/dynamic-exact.py
+      policy: tests/fixtures/capabilities/dynamic-policy.yaml
+    expect:
+      exit_code: 0
+      unresolved_dynamic: []
+      errors: []
+      capabilities:
+        - id: dynamic_code_exec
+          level: protected
+          signals:
+            - kind: builtin
+              line: 9
+              name: __import__
+        - id: subprocess_exec
+          level: protected
+          signals:
+            - kind: call
+              line: 5
+              name: os.system
+            - kind: dynamic_import
+              line: 9
+              name: subprocess
+
+  - name: python-capabilities-dynamic-watched
+    gate: extract-python-capabilities
+    input:
+      source_file: tests/fixtures/capabilities/dynamic-watched.py
+      policy: tests/fixtures/capabilities/dynamic-policy.yaml
+    expect:
+      exit_code: 0
+      unresolved_dynamic: []
+      errors: []
+      capabilities:
+        - id: dynamic_code_exec
+          level: watched
+          signals:
+            - kind: dynamic_import
+              line: 15
+              name: __import__
+            - kind: dynamic_import
+              line: 19
+              name: importlib.import_module
+            - kind: base64_dynamic
+              line: 23
+              name: __import__
+            - kind: namespace_access
+              line: 27
+              name: globals
+        - id: subprocess_exec
+          level: watched
+          signals:
+            - kind: dynamic_access
+              line: 7
+              name: os.*
+            - kind: dynamic_access
+              line: 11
+              name: os.*
+
+  - name: python-capabilities-parse-error
+    gate: extract-python-capabilities
+    input:
+      source_file: tests/fixtures/capabilities/invalid.py
+    expect:
+      exit_code: 0
+      parse_error_present: true
+      capabilities: []
+
+  - name: python-capabilities-unreadable
+    gate: extract-python-capabilities
+    input:
+      source_file: tests/fixtures/function-classification/base/app/non_utf8.py
+    expect:
+      exit_code: 0
+      unreadable_present: true
+      capabilities: []
+
+  - name: new-capabilities-new-only
+    gate: check-new-capabilities
+    input:
+      fixture_dir: tests/fixtures/new-capabilities/new-only
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      deterministic_stdout: true
+      new_capabilities:
+        - path: app/new_client.py
+          id: outbound_network
+          level: protected
+          reviewer: security-reviewer
+          signal_names: [requests]
+      warned_capabilities: []
+      fail_closed: []
+
+  - name: new-capabilities-delete-only
+    gate: check-new-capabilities
+    input:
+      fixture_dir: tests/fixtures/new-capabilities/delete-only
+    expect:
+      verdict: pass
+      exit_code: 0
+      new_capabilities: []
+      warned_capabilities: []
+      fail_closed: []
+
+  - name: new-capabilities-getattr-assignment
+    gate: check-new-capabilities
+    input:
+      fixture_dir: tests/fixtures/new-capabilities/getattr-assignment
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      new_capabilities:
+        - path: app/run.py
+          id: subprocess_exec
+          level: protected
+          reviewer: security-reviewer
+          signal_names: [os.system]
+      warned_capabilities: []
+      fail_closed: []
+
+  - name: new-capabilities-getattr-assignment-alias
+    gate: check-new-capabilities
+    input:
+      fixture_dir: tests/fixtures/new-capabilities/getattr-assignment-alias
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      new_capabilities:
+        - path: app/run.py
+          id: subprocess_exec
+          level: protected
+          reviewer: security-reviewer
+          signal_names: [os.system]
+      warned_capabilities: []
+      fail_closed: []
+
+  - name: new-capabilities-unreadable-head
+    gate: check-new-capabilities
+    input:
+      fixture_dir: tests/fixtures/new-capabilities/unreadable-head
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      new_capabilities: []
+      warned_capabilities: []
+      fail_closed:
+        - path: app/bad.py
+          level: protected
+          reason: head file could not be parsed after the change
+      errors_present: true
+
+  - name: new-capabilities-unreadable-base
+    gate: check-new-capabilities
+    input:
+      fixture_dir: tests/fixtures/new-capabilities/unreadable-base
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      new_capabilities:
+        - path: app/bad.py
+          id: outbound_network
+          level: protected
+          reviewer: security-reviewer
+          signal_names: [requests]
+      warned_capabilities: []
+      fail_closed: []
+      errors_present: true
+
+  - name: new-capabilities-frozen-policy
+    gate: check-new-capabilities
+    input:
+      fixture_dir: tests/fixtures/new-capabilities/frozen-policy
+      policy: tests/fixtures/capabilities/frozen-policy.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      new_capabilities:
+        - path: app/run.py
+          id: forbidden_test
+          level: protected
+          reviewer: security-reviewer
+          signal_names: [subprocess]
+      warned_capabilities: []
+      fail_closed: []
+      errors_present: true
+
+  - name: new-capabilities-shadow-pass
+    gate: check-new-capabilities
+    input:
+      fixture_dir: tests/fixtures/new-capabilities/shadow-capability
+      policy: tests/fixtures/capabilities/shadow-policy.yaml
+    expect:
+      verdict: pass
+      exit_code: 0
+      new_capabilities: []
+      warned_capabilities: []
+      shadow_capabilities:
+        - path: app/client.py
+          id: outbound_network
+          level: protected
+          reviewer: security-reviewer
+          signal_names: [requests]
+      fail_closed: []
+
+  - name: new-capabilities-invalid-maturity-enforcing
+    gate: check-new-capabilities
+    input:
+      fixture_dir: tests/fixtures/new-capabilities/invalid-maturity
+      policy: tests/fixtures/capabilities/invalid-maturity-policy.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      new_capabilities:
+        - path: app/client.py
+          id: outbound_network
+          level: protected
+          reviewer: security-reviewer
+          signal_names: [requests]
+      warned_capabilities: []
+      shadow_capabilities: []
+      fail_closed: []
+      errors_present: true
+
+  - name: new-capabilities-dynamic-watched-pass
+    gate: check-new-capabilities
+    input:
+      fixture_dir: tests/fixtures/new-capabilities/dynamic-watched
+      policy: tests/fixtures/capabilities/dynamic-policy.yaml
+    expect:
+      verdict: pass
+      exit_code: 0
+      new_capabilities: []
+      warned_capabilities:
+        - path: app/run.py
+          id: subprocess_exec
+          level: watched
+          reviewer: security-reviewer
+          signal_names: [os.*]
+      fail_closed: []
+
+  - name: new-capabilities-dynamic-level-escalation
+    gate: check-new-capabilities
+    input:
+      fixture_dir: tests/fixtures/new-capabilities/dynamic-level-escalation
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      new_capabilities:
+        - path: app/run.py
+          id: subprocess_exec
+          level: protected
+          reviewer: security-reviewer
+          signal_names: [os.*, os.system]
+      warned_capabilities: []
+      fail_closed: []
+
+  - name: policy-change-loosening-level
+    gate: check-policy-change
+    input:
+      fixture_dir: tests/fixtures/policy-change/loosening
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      deterministic_stdout: true
+      policy_loosening_kinds:
+        - removed_required_approval
+        - weakened_zone_level
+      enforcement_bypass_kinds: []
+
+  - name: policy-change-strengthening
+    gate: check-policy-change
+    input:
+      fixture_dir: tests/fixtures/policy-change/strengthening
+    expect:
+      verdict: pass
+      exit_code: 0
+      policy_loosening_kinds: []
+      enforcement_bypass_kinds: []
+
+  - name: policy-change-comments-only
+    gate: check-policy-change
+    input:
+      fixture_dir: tests/fixtures/policy-change/comments-only
+    expect:
+      verdict: pass
+      exit_code: 0
+      policy_loosening_kinds: []
+      enforcement_bypass_kinds: []
+
+  - name: policy-change-rule-delete
+    gate: check-policy-change
+    input:
+      fixture_dir: tests/fixtures/policy-change/rule-delete
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      policy_loosening_kinds:
+        - removed_list_item
+      enforcement_bypass_kinds: []
+
+  - name: policy-change-maturity-shadow-loosening
+    gate: check-policy-change
+    input:
+      fixture_dir: tests/fixtures/policy-change/maturity-shadow-loosening
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      policy_loosening_kinds:
+        - weakened_zone_maturity
+      enforcement_bypass_kinds: []
+
+  - name: policy-change-maturity-shadow-new
+    gate: check-policy-change
+    input:
+      fixture_dir: tests/fixtures/policy-change/maturity-shadow-new
+    expect:
+      verdict: pass
+      exit_code: 0
+      policy_loosening_kinds: []
+      enforcement_bypass_kinds: []
+
+  - name: policy-change-runner-bypass
+    gate: check-policy-change
+    input:
+      fixture_dir: tests/fixtures/policy-change/runner-bypass
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      policy_loosening_kinds: []
+      enforcement_bypass_kinds:
+        - added_gate_bypass
+
+  - name: policy-change-runner-continue-on-error
+    gate: check-policy-change
+    input:
+      fixture_dir: tests/fixtures/policy-change/runner-continue-on-error
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      policy_loosening_kinds: []
+      enforcement_bypass_kinds:
+        - added_gate_bypass
+
+  - name: policy-change-runner-continue-on-error-comment
+    gate: check-policy-change
+    input:
+      fixture_dir: tests/fixtures/policy-change/runner-continue-on-error-comment
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      policy_loosening_kinds: []
+      enforcement_bypass_kinds:
+        - added_gate_bypass
+
+  - name: policy-change-runner-removal
+    gate: check-policy-change
+    input:
+      fixture_dir: tests/fixtures/policy-change/runner-removal
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      policy_loosening_kinds: []
+      enforcement_bypass_kinds:
+        - removed_gate_invocation
+
+  - name: policy-change-required-check-removal
+    gate: check-policy-change
+    input:
+      fixture_dir: tests/fixtures/policy-change/required-check-removal
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      policy_loosening_kinds: []
+      enforcement_bypass_kinds:
+        - removed_required_check
+
+  - name: bootstrap-sensitive-zones-candidates
+    gate: bootstrap-sensitive-zones
+    input:
+      repo: tests/fixtures/bootstrap-sensitive-zones/repo
+      rules: tests/fixtures/bootstrap-sensitive-zones/rules.yaml
+    expect:
+      exit_code: 0
+      candidate_count: 3
+      candidate_paths:
+        - db/migrations/**
+        - services/auth/**
+        - src/security/**
+      candidate_levels:
+        - protected
+        - protected
+        - protected
+      candidate_statuses:
+        - proposed
+        - proposed
+        - proposed
+      evidence_sources:
+        - [codeowners, path_naming]
+        - [path_naming]
+        - [codeowners]
+      codeowners_read: true
+      draft_only: true
+      rejection_schema: true
+      deterministic_stdout: true
+
+  - name: bootstrap-sensitive-zones-empty
+    gate: bootstrap-sensitive-zones
+    input:
+      repo: tests/fixtures/bootstrap-sensitive-zones/repo
+      rules: tests/fixtures/bootstrap-sensitive-zones/empty-rules.yaml
+    expect:
+      exit_code: 0
+      candidate_count: 0
+      candidate_paths: []
+      codeowners_read: true
+      draft_only: true
+
+  - name: bootstrap-sensitive-zones-rejected-suppressed
+    gate: bootstrap-sensitive-zones
+    input:
+      repo: tests/fixtures/bootstrap-sensitive-zones/repo
+      rules: tests/fixtures/bootstrap-sensitive-zones/rules.yaml
+      previous: tests/fixtures/bootstrap-sensitive-zones/previous.yaml
+    expect:
+      exit_code: 0
+      candidate_count: 1
+      suppressed_accepted: 1
+      suppressed_rejected: 1
+      candidate_paths:
+        - src/security/**
+
+  - name: bootstrap-sensitive-functions-candidates
+    gate: bootstrap-sensitive-functions
+    input:
+      repo: tests/fixtures/bootstrap-sensitive-functions/repo
+      policy: policies/sensitive-capabilities.yaml
+      tables: tests/fixtures/bootstrap-sensitive-functions/tables.yaml
+    expect:
+      exit_code: 0
+      candidate_count: 2
+      sql_tables_loaded: 1
+      candidate_functions:
+        - app/risky.py::load_customer
+        - app/risky.py::run_command
+      candidate_capabilities:
+        - [sql_table:customer_pii]
+        - [subprocess_exec]
+      candidate_statuses:
+        - proposed
+        - proposed
+      evidence_sources:
+        - [sql_table_reference]
+        - [capability_signal]
+      draft_only: true
+      limitation_statement: true
+      anchor_present: true
+      rejection_schema: true
+      deterministic_stdout: true
+
+  - name: bootstrap-sensitive-functions-rejected-suppressed
+    gate: bootstrap-sensitive-functions
+    input:
+      repo: tests/fixtures/bootstrap-sensitive-functions/repo
+      policy: policies/sensitive-capabilities.yaml
+      tables: tests/fixtures/bootstrap-sensitive-functions/tables.yaml
+      previous: tests/fixtures/bootstrap-sensitive-functions/previous.yaml
+    expect:
+      exit_code: 0
+      candidate_count: 1
+      suppressed_rejected: 1
+      candidate_functions:
+        - app/risky.py::load_customer
+
+  - name: bootstrap-sensitive-functions-accepted-suppressed
+    gate: bootstrap-sensitive-functions
+    input:
+      repo: tests/fixtures/bootstrap-sensitive-functions/repo
+      policy: policies/sensitive-capabilities.yaml
+      tables: tests/fixtures/bootstrap-sensitive-functions/tables.yaml
+      previous: tests/fixtures/bootstrap-sensitive-functions/previous-accepted.yaml
+    expect:
+      exit_code: 0
+      candidate_count: 1
+      suppressed_accepted: 1
+      candidate_functions:
+        - app/risky.py::load_customer
+
+  - name: gov-annotations-multi-sink-metadata
+    gate: extract-gov-annotations
+    input:
+      source_file: tests/fixtures/gov-annotations/multi_sink.py
+      display_path: app/reports.py
+    expect:
+      exit_code: 0
+      annotation_count: 1
+      annotation_metadata:
+        download_bulk:
+          sink: true
+          reason: PII bulk export
+          owner: security-reviewer
+
+  - name: sink-registration-defaults
+    gate: extract-sinks
+    input:
+      repo: tests/fixtures/sinks/repo
+      sensitive_zones: tests/fixtures/sinks/sensitive-zones.yaml
+      sink_registry: tests/fixtures/sinks/missing-sink-registry.yaml
+    expect:
+      exit_code: 0
+      sinks:
+        - id: gov:app.reports.download_report
+          function: app.reports.download_report
+          source: gov_annotation
+          maturity: shadow
+          hops: 1
+          owner: security-reviewer
+        - id: frozen:services.settlement.calculate.settle_async
+          function: services.settlement.calculate.settle_async
+          source: frozen_zone
+          maturity: enforcing
+          hops: 1
+          owner: null
+        - id: frozen:services.settlement.calculate.settle_batch
+          function: services.settlement.calculate.settle_batch
+          source: frozen_zone
+          maturity: enforcing
+          hops: 1
+          owner: null
+      errors_present: false
+      deterministic_stdout: true
+
+  - name: sink-registration-registry
+    gate: extract-sinks
+    input:
+      repo: tests/fixtures/sinks/repo
+      sensitive_zones: tests/fixtures/sinks/sensitive-zones.yaml
+      sink_registry: tests/fixtures/sinks/sink-registry.yaml
+    expect:
+      exit_code: 0
+      sinks:
+        - id: gov:app.reports.download_report
+          function: app.reports.download_report
+          source: gov_annotation
+          maturity: shadow
+          hops: 1
+          owner: security-reviewer
+        - id: invalid_maturity_registry
+          function: app.reports.registry_sink
+          source: sink_registry
+          maturity: enforcing
+          hops: 1
+          owner: security-reviewer
+        - id: report_registry
+          function: app.reports.registry_sink
+          source: sink_registry
+          maturity: enforcing
+          hops: 2
+          owner: security-reviewer
+        - id: frozen:services.settlement.calculate.settle_async
+          function: services.settlement.calculate.settle_async
+          source: frozen_zone
+          maturity: enforcing
+          hops: 1
+          owner: null
+        - id: frozen:services.settlement.calculate.settle_batch
+          function: services.settlement.calculate.settle_batch
+          source: frozen_zone
+          maturity: enforcing
+          hops: 1
+          owner: null
+      error_kinds:
+        - invalid_maturity
+        - unresolved_registry_function
+
+  - name: callgraph-repo-static
+    gate: extract-callgraph
+    input:
+      repo: tests/fixtures/callgraph/repo
+    expect:
+      exit_code: 0
+      nodes:
+        - app.conditional.fallback
+        - app.conditional.load_value
+        - app.conditional.load_value
+        - app.conditional.normalize
+        - app.overloads.C.caller
+        - app.overloads.C.foo
+        - app.overloads.C.sink
+        - app.overloads.bar
+        - app.overloads.foo
+        - app.overloads.qualified_bar
+        - app.overloads.sink
+        - app.reports.ReportService.export
+        - app.reports.download_report
+        - app.reports.dynamic_dispatch
+        - app.reports.format_report
+        - app.reports.render_report
+        - app.utils.check_permission
+        - app.utils.unrelated
+      edges:
+        - caller: app.conditional.load_value
+          callee: app.conditional.fallback
+          call: fallback
+        - caller: app.conditional.load_value
+          callee: app.conditional.normalize
+          call: normalize
+        - caller: app.overloads.C.caller
+          callee: app.overloads.sink
+          call: sink
+        - caller: app.overloads.bar
+          callee: app.overloads.foo
+          call: foo
+        - caller: app.overloads.qualified_bar
+          callee: app.overloads.sink
+          call: app.overloads.sink
+        - caller: app.reports.ReportService.export
+          callee: app.reports.render_report
+          call: render_report
+        - caller: app.reports.download_report
+          callee: app.conditional.load_value
+          call: app.conditional.load_value
+        - caller: app.reports.download_report
+          callee: app.reports.render_report
+          call: render_report
+        - caller: app.reports.download_report
+          callee: app.utils.check_permission
+          call: app.utils.check_permission
+        - caller: app.reports.render_report
+          callee: app.reports.format_report
+          call: format_report
+      unresolved_calls:
+        - caller: app.reports.dynamic_dispatch
+          kind: dynamic
+          name: getattr(...)
+      coverage_unevaluated:
+        - caller: app.reports.dynamic_dispatch
+          kind: dynamic
+          name: getattr(...)
+      errors_present: false
+      deterministic_stdout: true
+
+  - name: java-callgraph-conservative
+    group: adversarial
+    gate: extract-java-callgraph
+    input:
+      repo: tests/fixtures/java-callgraph/repo
+    expect:
+      exit_code: 0
+      edges:
+        - caller: BillingService.auditInjected
+          callee: PaymentPort.audit
+          call: injected.audit
+        - caller: BillingService.auditStandalone
+          callee: StandalonePort.audit
+          call: standalone.audit
+        - caller: BillingService.auditViaBaseInterface
+          callee: BaseSettlementPort.audit
+          call: port.audit
+        - caller: BillingService.auditViaBaseInterface
+          callee: SpecializedSettlementPort.audit
+          call: port.audit
+        - caller: BillingService.billConstructed
+          callee: CardPayment.pay
+          call: constructed.pay
+        - caller: BillingService.billConstructed
+          callee: PaymentPort.pay
+          call: constructed.pay
+        - caller: BillingService.billConstructed
+          callee: RegionalCardPayment.pay
+          call: constructed.pay
+        - caller: BillingService.billConstructed
+          callee: WirePayment.pay
+          call: constructed.pay
+        - caller: BillingService.billInjected
+          callee: CardPayment.pay
+          call: injected.pay
+        - caller: BillingService.billInjected
+          callee: PaymentPort.pay
+          call: injected.pay
+        - caller: BillingService.billInjected
+          callee: RegionalCardPayment.pay
+          call: injected.pay
+        - caller: BillingService.billInjected
+          callee: WirePayment.pay
+          call: injected.pay
+        - caller: BillingService.settleViaAbstractClass
+          callee: AbstractSettlementPort.settle
+          call: port.settle
+        - caller: BillingService.settleViaAbstractClass
+          callee: ConcreteSettlementPort.settle
+          call: port.settle
+        - caller: BillingService.settleViaBaseInterface
+          callee: BaseSettlementPort.settle
+          call: port.settle
+        - caller: BillingService.settleViaBaseInterface
+          callee: SettlementPayment.settle
+          call: port.settle
+        - caller: BillingService.settleViaConcreteClass
+          callee: AbstractSettlementPort.settle
+          call: port.settle
+        - caller: BillingService.settleViaConcreteClass
+          callee: ConcreteSettlementPort.settle
+          call: port.settle
+        - caller: BillingService.useStandaloneUtility
+          callee: StandalonePort.utility
+          call: StandalonePort.utility
+        - caller: StandalonePort.delegate
+          callee: StandalonePort.helper
+          call: helper
+      unresolved_calls:
+        - caller: BillingService.reflect
+          kind: dynamic
+          name: method.invoke
+      coverage_unevaluated:
+        - caller: BillingService.reflect
+          kind: dynamic
+          name: method.invoke
+      errors_present: false
+      deterministic_stdout: true
+
+  - name: parity-java-callgraph
+    group: parity
+    gate: extract-java-callgraph
+    input:
+      repo: tests/fixtures/parity/java-callgraph/repo
+    expect:
+      exit_code: 0
+      edges:
+        - caller: Flow.sink
+          callee: Flow.helper
+          call: helper
+      unresolved_calls: []
+      coverage_unevaluated: []
+      errors_present: false
+      deterministic_stdout: true
+
+  - name: java-callgraph-static-modifier-initializers
+    group: adversarial
+    gate: extract-java-callgraph
+    input:
+      repo: tests/fixtures/java-callgraph-static-modifiers/repo
+    expect:
+      exit_code: 0
+      edges: []
+      coverage_unevaluated_with_dispatch:
+        - caller: Flow.<clinit>
+          kind: lambda_dispatch
+          name: lambda
+          dispatch_targets: [Task.exec]
+        - caller: Flow.<clinit>
+          kind: lambda_dispatch
+          name: lambda
+          dispatch_targets: [Task.exec]
+        - caller: Flow.<clinit>
+          kind: lambda_dispatch
+          name: lambda
+          dispatch_targets: [Task.exec]
+      errors_present: false
+      deterministic_stdout: true
+
+  - name: java-callgraph-static-modifier-instance-token
+    group: adversarial
+    gate: extract-java-callgraph
+    input:
+      repo: tests/fixtures/java-callgraph-static-modifier-instance-token/repo
+    expect:
+      exit_code: 0
+      edges: []
+      coverage_unevaluated_with_dispatch:
+        - caller: Flow.<init>
+          kind: lambda_dispatch
+          name: lambda
+          dispatch_targets: [Task.exec]
+      errors_present: false
+      deterministic_stdout: true
+
+  - name: java-callgraph-static-modifier-annotation-token
+    group: adversarial
+    gate: extract-java-callgraph
+    input:
+      repo: tests/fixtures/java-callgraph-static-modifier-annotation-token/repo
+    expect:
+      exit_code: 0
+      edges: []
+      coverage_unevaluated_with_dispatch:
+        - caller: Flow.<init>
+          kind: lambda_dispatch
+          name: lambda
+          dispatch_targets: [Task.exec]
+      errors_present: false
+      deterministic_stdout: true
+
+  - name: java-callgraph-enum-constant-body-coverage
+    group: adversarial
+    gate: extract-java-callgraph
+    input:
+      repo: tests/fixtures/java-callgraph-enum-constant-body/repo
+    expect:
+      exit_code: 0
+      edges: []
+      coverage_unevaluated_with_dispatch:
+        - caller: Reg.<init>
+          kind: lambda_dispatch
+          name: lambda
+          dispatch_targets: [Task.exec]
+      errors_present: false
+      deterministic_stdout: true
+
+  - name: parity-python-callgraph
+    group: parity
+    gate: extract-callgraph
+    input:
+      repo: tests/fixtures/parity/python-callgraph/repo
+    expect:
+      exit_code: 0
+      edges:
+        - caller: app.flow.sink
+          callee: app.flow.helper
+          call: helper
+      unresolved_calls: []
+      coverage_unevaluated: []
+      errors_present: false
+      deterministic_stdout: true
+
+  - name: indirect-impact-direct
+    group: adversarial
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/indirect-impact/direct
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones.yaml
+      sink_registry: tests/fixtures/indirect-impact/direct/sink-registry.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      indirect_impact:
+        - sink_id: report_download
+          changed_function: app.utils.check_permission
+          path:
+            - app.reports.download_report
+            - app.utils.check_permission
+          hops: 1
+          reviewer: security-reviewer
+          maturity: enforcing
+      shadow_hits: []
+      reviewer_required:
+        - security-reviewer
+      fail_closed_present: false
+      errors_present: false
+      deterministic_stdout: true
+
+  - name: indirect-impact-shadow
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/indirect-impact/shadow
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones.yaml
+      sink_registry: tests/fixtures/indirect-impact/shadow/sink-registry.yaml
+    expect:
+      verdict: pass
+      exit_code: 0
+      indirect_impact: []
+      shadow_hits:
+        - sink_id: report_download_shadow
+          changed_function: app.utils.check_permission
+          path:
+            - app.reports.download_report
+            - app.utils.check_permission
+          hops: 1
+          reviewer: security-reviewer
+          maturity: shadow
+      reviewer_required: []
+      fail_closed_present: false
+      errors_present: false
+
+  - name: indirect-impact-two-hop-boundary
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/indirect-impact/two-hop-boundary
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones.yaml
+      sink_registry: tests/fixtures/indirect-impact/two-hop-boundary/sink-registry.yaml
+    expect:
+      verdict: pass
+      exit_code: 0
+      indirect_impact: []
+      shadow_hits: []
+      reviewer_required: []
+      fail_closed_present: false
+      errors_present: false
+
+  - name: indirect-impact-analysis-error
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/indirect-impact/analysis-error
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones.yaml
+      sink_registry: tests/fixtures/indirect-impact/analysis-error/sink-registry.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      indirect_impact:
+        - sink_id: report_download
+          changed_function: app.utils.check_permission
+          path:
+            - app.reports.download_report
+            - app.utils.check_permission
+          hops: 1
+          reviewer: security-reviewer
+          maturity: enforcing
+      shadow_hits: []
+      reviewer_required:
+        - security-reviewer
+        - tool_owner
+      fail_closed_present: true
+      errors_present: true
+
+  - name: indirect-impact-method-sink
+    group: adversarial
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/indirect-impact/method-sink
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones.yaml
+      sink_registry: tests/fixtures/indirect-impact/method-sink/sink-registry.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      indirect_impact:
+        - sink_id: method_report_export
+          changed_function: app.utils.check_permission
+          path:
+            - app.reports.ReportService.export
+            - app.utils.check_permission
+          hops: 1
+          reviewer: security-reviewer
+          maturity: enforcing
+      shadow_hits: []
+      reviewer_required:
+        - security-reviewer
+      fail_closed_present: false
+      errors_present: false
+
+  - name: indirect-impact-frozen-auto-sink
+    group: adversarial
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/indirect-impact/frozen-auto
+      sensitive_zones: tests/fixtures/indirect-impact/frozen-auto/sensitive-zones.yaml
+      sink_registry: tests/fixtures/indirect-impact/frozen-auto/sink-registry.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      indirect_impact:
+        - sink_id: frozen:app.settlement.core.transfer
+          changed_function: app.utils.compute_fee
+          path:
+            - app.settlement.core.transfer
+            - app.utils.compute_fee
+          hops: 1
+          reviewer: settlement-reviewer
+          maturity: enforcing
+      shadow_hits: []
+      reviewer_required:
+        - settlement-reviewer
+      fail_closed_present: false
+      errors_present: false
+
+  - name: indirect-impact-gov-opt-in-boundary
+    group: adversarial
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/indirect-impact/gov-opt-in
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones.yaml
+      sink_registry: tests/fixtures/indirect-impact/gov-opt-in/sink-registry.yaml
+    expect:
+      verdict: pass
+      exit_code: 0
+      indirect_impact: []
+      shadow_hits:
+        - sink_id: gov:app.reports.download_report
+          changed_function: app.utils.check_permission
+          path:
+            - app.reports.download_report
+            - app.utils.check_permission
+          hops: 1
+          reviewer: security-reviewer
+          maturity: shadow
+      reviewer_required: []
+      fail_closed_present: false
+      errors_present: false
+
+  - name: indirect-impact-consumer-overdetect-boundary
+    group: adversarial
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/indirect-impact/consumer-overdetect
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones.yaml
+      sink_registry: tests/fixtures/indirect-impact/consumer-overdetect/sink-registry.yaml
+    expect:
+      verdict: pass
+      exit_code: 0
+      indirect_impact: []
+      shadow_hits: []
+      reviewer_required: []
+      fail_closed_present: false
+      errors_present: false
+
+  - name: indirect-impact-dynamic-coverage
+    group: adversarial
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/indirect-impact/dynamic-coverage
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones.yaml
+      sink_registry: tests/fixtures/indirect-impact/dynamic-coverage/sink-registry.yaml
+    expect:
+      verdict: pass
+      exit_code: 0
+      indirect_impact: []
+      shadow_hits: []
+      reviewer_required: []
+      fail_closed_present: false
+      errors_present: false
+      coverage_unevaluated:
+        - caller: app.reports.dispatch
+          kind: dynamic
+          name: getattr(...)
+
+  - name: indirect-impact-conditional-same-name
+    group: adversarial
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/indirect-impact/conditional-same-name
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones.yaml
+      sink_registry: tests/fixtures/indirect-impact/conditional-same-name/sink-registry.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      indirect_impact:
+        - sink_id: conditional_report
+          changed_function: app.conditional.fallback
+          path:
+            - app.reports.download_report
+            - app.conditional.load_value
+            - app.conditional.fallback
+          hops: 2
+          reviewer: security-reviewer
+          maturity: enforcing
+      shadow_hits: []
+      reviewer_required:
+        - security-reviewer
+      fail_closed_present: false
+      errors_present: false
+
+  - name: java-sink-registration
+    group: adversarial
+    gate: extract-sinks
+    input:
+      repo: tests/fixtures/java-sinks/repo
+      sensitive_zones: tests/fixtures/java-sinks/sensitive-zones.yaml
+      sink_registry: tests/fixtures/java-sinks/sink-registry.yaml
+    expect:
+      exit_code: 0
+      sinks:
+        - id: frozen:FrozenLedger.settle
+          function: FrozenLedger.settle
+          source: frozen_zone
+          maturity: enforcing
+          hops: 1
+          owner: settlement-reviewer
+        - id: gov:Reports.download
+          function: Reports.download
+          source: gov_annotation
+          maturity: shadow
+          hops: 1
+          owner: security-reviewer
+        - id: java_registry
+          function: Reports.registryTarget
+          source: sink_registry
+          maturity: enforcing
+          hops: 2
+          owner: platform-reviewer
+      errors_present: false
+      deterministic_stdout: true
+
+  - name: parity-java-indirect-direct
+    group: parity
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/parity/java-indirect-direct
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/parity/java-indirect-direct/sink-registry.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      indirect_impact:
+        - sink_id: parity_sink
+          changed_function: Flow.helper
+          path: [Flow.sink, Flow.helper]
+          hops: 1
+          reviewer: parity-reviewer
+          maturity: enforcing
+      shadow_hits: []
+      reviewer_required: [parity-reviewer]
+      fail_closed_present: false
+      errors_present: false
+
+  - name: parity-python-indirect-direct
+    group: parity
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/parity/python-indirect-direct
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/parity/python-indirect-direct/sink-registry.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      indirect_impact:
+        - sink_id: parity_sink
+          changed_function: app.flow.helper
+          path: [app.flow.sink, app.flow.helper]
+          hops: 1
+          reviewer: parity-reviewer
+          maturity: enforcing
+      shadow_hits: []
+      reviewer_required: [parity-reviewer]
+      fail_closed_present: false
+      errors_present: false
+
+  - name: parity-java-indirect-unrelated
+    group: parity
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/parity/java-indirect-unrelated
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/parity/java-indirect-unrelated/sink-registry.yaml
+    expect: &indirect_parity_pass
+      verdict: pass
+      exit_code: 0
+      indirect_impact: []
+      shadow_hits: []
+      reviewer_required: []
+      fail_closed_present: false
+      errors_present: false
+
+  - name: parity-python-indirect-unrelated
+    group: parity
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/parity/python-indirect-unrelated
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/parity/python-indirect-unrelated/sink-registry.yaml
+    expect: *indirect_parity_pass
+
+  - name: parity-java-indirect-hop-boundary
+    group: parity
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/parity/java-indirect-boundary
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/parity/java-indirect-boundary/sink-registry.yaml
+    expect: *indirect_parity_pass
+
+  - name: parity-python-indirect-hop-boundary
+    group: parity
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/parity/python-indirect-boundary
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/parity/python-indirect-boundary/sink-registry.yaml
+    expect: *indirect_parity_pass
+
+  - name: java-indirect-anonymous-dispatch
+    group: adversarial
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/java-indirect-anonymous
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/java-indirect-anonymous/sink-registry.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      indirect_impact:
+        - sink_id: anonymous_sink
+          changed_function: Ledger.settle
+          path: [Flow.sink, Port.run, Ledger.settle]
+          hops: 2
+          reviewer: security-reviewer
+          maturity: enforcing
+      shadow_hits: []
+      reviewer_required: [security-reviewer]
+      fail_closed_present: false
+      errors_present: false
+      coverage_unevaluated:
+        - caller: Port.run
+          kind: unresolved
+          name: new Ledger
+        - caller: Port.run
+          kind: unresolved
+          name: new Ledger
+      deterministic_stdout: true
+
+  - name: java-indirect-lambda-dispatch
+    group: adversarial
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/java-indirect-lambda
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/java-indirect-lambda/sink-registry.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      indirect_impact:
+        - sink_id: lambda_sink
+          changed_function: Ledger.settle
+          path: [Flow.sink, Port.run, Ledger.settle]
+          hops: 2
+          reviewer: security-reviewer
+          maturity: enforcing
+      shadow_hits: []
+      reviewer_required: [security-reviewer]
+      fail_closed_present: false
+      errors_present: false
+      coverage_unevaluated:
+        - caller: Port.run
+          kind: unresolved
+          name: new Ledger
+      deterministic_stdout: true
+
+  - name: java-indirect-lambda-argument-fail-closed
+    group: adversarial
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/java-indirect-lambda-argument
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/java-indirect-lambda-argument/sink-registry.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      indirect_impact:
+        - sink_id: lambda_argument_sink
+          changed_function: Ledger.settle
+          path: [Flow.sink, Port.run, Ledger.settle]
+          hops: 2
+          reviewer: security-reviewer
+          maturity: enforcing
+      shadow_hits: []
+      reviewer_required: [security-reviewer, tool_owner]
+      fail_closed_present: true
+      errors_present: true
+      coverage_unevaluated:
+        - caller: Flow.wire
+          kind: lambda_dispatch
+          name: lambda
+        - caller: Port.run
+          kind: unresolved
+          name: new Ledger
+      deterministic_stdout: true
+
+  - name: java-indirect-lambda-default-fail-closed
+    group: adversarial
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/java-indirect-lambda-default
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/java-indirect-lambda-default/sink-registry.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      indirect_impact:
+        - sink_id: lambda_default_sink
+          changed_function: Ledger.settle
+          path: [Flow.sink, Port.run, Ledger.settle]
+          hops: 2
+          reviewer: security-reviewer
+          maturity: enforcing
+      shadow_hits: []
+      reviewer_required: [security-reviewer]
+      fail_closed_present: false
+      errors_present: false
+      coverage_unevaluated:
+        - caller: Port.run
+          kind: unresolved
+          name: new Ledger
+      deterministic_stdout: true
+
+  - name: java-indirect-field-lambda-fail-closed
+    group: adversarial
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/java-indirect-field-lambda
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/java-indirect-field-lambda/sink-registry.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      indirect_impact: []
+      shadow_hits: []
+      reviewer_required: [tool_owner]
+      fail_closed_present: true
+      errors_present: true
+      coverage_unevaluated:
+        - caller: Flow.<init>
+          kind: lambda_dispatch
+          name: lambda
+      deterministic_stdout: true
+
+  - name: java-indirect-field-anonymous-fail-closed
+    group: adversarial
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/java-indirect-field-anonymous
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/java-indirect-field-anonymous/sink-registry.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      indirect_impact: []
+      shadow_hits: []
+      reviewer_required: [tool_owner]
+      fail_closed_present: true
+      errors_present: true
+      coverage_unevaluated:
+        - caller: Flow.<init>
+          kind: anonymous_class
+          name: new Task
+      deterministic_stdout: true
+
+  - name: java-indirect-static-lambda-fail-closed
+    group: adversarial
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/java-indirect-static-lambda
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/java-indirect-static-lambda/sink-registry.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      indirect_impact: []
+      shadow_hits: []
+      reviewer_required: [tool_owner]
+      fail_closed_present: true
+      errors_present: true
+      coverage_unevaluated:
+        - caller: Flow.<clinit>
+          kind: lambda_dispatch
+          name: lambda
+      deterministic_stdout: true
+
+  - name: java-indirect-method-reference-dispatch
+    group: adversarial
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/java-indirect-method-reference
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/java-indirect-method-reference/sink-registry.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      indirect_impact:
+        - sink_id: method_reference_sink
+          changed_function: Vault.transfer
+          path: [Flow.sink, Task.exec, Vault.transfer]
+          hops: 2
+          reviewer: security-reviewer
+          maturity: enforcing
+      shadow_hits: []
+      reviewer_required: [security-reviewer]
+      fail_closed_present: false
+      errors_present: false
+      coverage_unevaluated: []
+      deterministic_stdout: true
+
+  - name: java-indirect-jdk-runnable-lambda-fail-closed
+    group: adversarial
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/java-indirect-jdk-runnable-lambda
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/java-indirect-jdk-runnable-lambda/sink-registry.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      indirect_impact: []
+      shadow_hits: []
+      reviewer_required: [tool_owner]
+      fail_closed_present: true
+      errors_present: true
+      coverage_unevaluated:
+        - caller: Flow.schedule
+          kind: unresolved
+          name: task.run
+        - caller: Flow.sink
+          kind: lambda_dispatch
+          name: lambda
+      deterministic_stdout: true
+
+  - name: java-indirect-jdk-runnable-anonymous-fail-closed
+    group: adversarial
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/java-indirect-jdk-runnable-anonymous
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/java-indirect-jdk-runnable-anonymous/sink-registry.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      indirect_impact: []
+      shadow_hits: []
+      reviewer_required: [tool_owner]
+      fail_closed_present: true
+      errors_present: true
+      coverage_unevaluated:
+        - caller: Flow.schedule
+          kind: unresolved
+          name: task.run
+        - caller: Flow.sink
+          kind: anonymous_class
+          name: new Runnable
+      deterministic_stdout: true
+
+  - name: java-indirect-executor-submit-fail-closed
+    group: adversarial
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/java-indirect-executor-submit
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/java-indirect-executor-submit/sink-registry.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      indirect_impact: []
+      shadow_hits: []
+      reviewer_required: [tool_owner]
+      fail_closed_present: true
+      errors_present: true
+      coverage_unevaluated:
+        - caller: Flow.helper
+          kind: lambda_dispatch
+          name: lambda
+        - caller: Flow.helper
+          kind: unresolved
+          name: pool.submit
+      deterministic_stdout: true
+
+  - name: java-indirect-external-method-reference-fail-closed
+    group: adversarial
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/java-indirect-external-method-reference
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/java-indirect-external-method-reference/sink-registry.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      indirect_impact: []
+      shadow_hits: []
+      reviewer_required: [tool_owner]
+      fail_closed_present: true
+      errors_present: true
+      coverage_unevaluated:
+        - caller: Flow.sink
+          kind: method_reference
+          name: vault::transfer
+        - caller: Flow.sink
+          kind: unresolved
+          name: new Vault
+        - caller: Flow.sink
+          kind: unresolved
+          name: rows.forEach
+      deterministic_stdout: true
+
+  - name: java-indirect-enum-field-lambda-fail-closed
+    group: adversarial
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/java-indirect-enum-field-lambda
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/java-indirect-enum-field-lambda/sink-registry.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      indirect_impact: []
+      shadow_hits: []
+      reviewer_required: [tool_owner]
+      fail_closed_present: true
+      errors_present: true
+      coverage_unevaluated:
+        - caller: Reg.<clinit>
+          kind: lambda_dispatch
+          name: lambda
+      deterministic_stdout: true
+
+  - name: java-indirect-enum-class-field-lambda-control
+    group: adversarial
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/java-indirect-enum-class-field-lambda
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/java-indirect-enum-class-field-lambda/sink-registry.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      indirect_impact: []
+      shadow_hits: []
+      reviewer_required: [tool_owner]
+      fail_closed_present: true
+      errors_present: true
+      coverage_unevaluated:
+        - caller: Reg.<clinit>
+          kind: lambda_dispatch
+          name: lambda
+      deterministic_stdout: true
+
+  - name: java-indirect-interface-constant-lambda-fail-closed
+    group: adversarial
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/java-indirect-interface-constant-lambda
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/java-indirect-interface-constant-lambda/sink-registry.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      indirect_impact: []
+      shadow_hits: []
+      reviewer_required: [tool_owner]
+      fail_closed_present: true
+      errors_present: true
+      coverage_unevaluated:
+        - caller: Cfg.<clinit>
+          kind: lambda_dispatch
+          name: lambda
+      deterministic_stdout: true
+
+  - name: java-indirect-anonymous-field-lambda-fail-closed
+    group: adversarial
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/java-indirect-anonymous-field-lambda
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/java-indirect-anonymous-field-lambda/sink-registry.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      indirect_impact: []
+      shadow_hits: []
+      reviewer_required: [tool_owner]
+      fail_closed_present: true
+      errors_present: true
+      coverage_unevaluated:
+        - caller: Flow.sink
+          kind: lambda_dispatch
+          name: lambda
+      deterministic_stdout: true
+
+  - name: java-indirect-instance-block-lambda-fail-closed
+    group: adversarial
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/java-indirect-instance-block-lambda
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/java-indirect-instance-block-lambda/sink-registry.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      indirect_impact: []
+      shadow_hits: []
+      reviewer_required: [tool_owner]
+      fail_closed_present: true
+      errors_present: true
+      coverage_unevaluated:
+        - caller: Flow.<init>
+          kind: lambda_dispatch
+          name: lambda
+      deterministic_stdout: true
+
+  - name: java-indirect-field-method-reference-fail-closed
+    group: adversarial
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/java-indirect-field-method-reference
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/java-indirect-field-method-reference/sink-registry.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      indirect_impact: []
+      shadow_hits: []
+      reviewer_required: [tool_owner]
+      fail_closed_present: true
+      errors_present: true
+      coverage_unevaluated:
+        - caller: Flow.<init>
+          kind: method_reference
+          name: vault::transfer
+      deterministic_stdout: true
+
+  - name: java-indirect-deferred-body-method-reference-dispatch
+    group: adversarial
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/java-indirect-deferred-body-method-reference
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/java-indirect-deferred-body-method-reference/sink-registry.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      indirect_impact:
+        - sink_id: deferred_body_method_reference_sink
+          changed_function: Vault.transfer
+          path: [Flow.sink, Task.exec, Vault.transfer]
+          hops: 2
+          reviewer: security-reviewer
+          maturity: enforcing
+      shadow_hits: []
+      reviewer_required: [security-reviewer]
+      fail_closed_present: false
+      errors_present: false
+      coverage_unevaluated: []
+      deterministic_stdout: true
+
+  - name: java-indirect-deferred-body-method-reference-unresolved
+    group: adversarial
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/java-indirect-deferred-body-method-reference-unresolved
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/java-indirect-deferred-body-method-reference-unresolved/sink-registry.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      indirect_impact: []
+      shadow_hits: []
+      reviewer_required: [tool_owner]
+      fail_closed_present: true
+      errors_present: true
+      coverage_unevaluated:
+        - caller: Task.exec
+          kind: method_reference
+          name: External::run
+      deterministic_stdout: true
+
+  # Unknown dispatch targets remain conservative when a sink closure contains any
+  # unresolved/bodyless dead end; this keeps fail-closed behavior over N4 noise.
+  - name: java-indirect-deferred-jdk-noise-fail-closed
+    group: adversarial
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/java-indirect-deferred-jdk-noise
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/java-indirect-deferred-jdk-noise/sink-registry.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      indirect_impact: []
+      shadow_hits: []
+      reviewer_required: [tool_owner]
+      fail_closed_present: true
+      errors_present: true
+      coverage_unevaluated:
+        - caller: Flow.check
+          kind: unresolved
+          name: rows.size
+        - caller: Flow.wire
+          kind: lambda_dispatch
+          name: lambda
+        - caller: Flow.wire
+          kind: unresolved
+          name: consume
+      deterministic_stdout: true
+
+  - name: java-indirect-jdk-runnable-field-lambda-fail-closed
+    group: adversarial
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/java-indirect-jdk-runnable-field-lambda
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/java-indirect-jdk-runnable-field-lambda/sink-registry.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      indirect_impact: []
+      shadow_hits: []
+      reviewer_required: [tool_owner]
+      fail_closed_present: true
+      errors_present: true
+      coverage_unevaluated:
+        - caller: Flow.sink
+          kind: unresolved
+          name: task.run
+        - caller: Flow.wire
+          kind: lambda_dispatch
+          name: lambda
+      deterministic_stdout: true
+
+  - name: java-indirect-jdk-runnable-field-anonymous-fail-closed
+    group: adversarial
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/java-indirect-jdk-runnable-field-anonymous
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/java-indirect-jdk-runnable-field-anonymous/sink-registry.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      indirect_impact: []
+      shadow_hits: []
+      reviewer_required: [tool_owner]
+      fail_closed_present: true
+      errors_present: true
+      coverage_unevaluated:
+        - caller: Flow.sink
+          kind: unresolved
+          name: task.run
+        - caller: Flow.wire
+          kind: anonymous_class
+          name: new Runnable
+      deterministic_stdout: true
+
+  - name: java-indirect-executor-submit-outside-sink-fail-closed
+    group: adversarial
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/java-indirect-executor-submit-outside-sink
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/java-indirect-executor-submit-outside-sink/sink-registry.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      indirect_impact: []
+      shadow_hits: []
+      reviewer_required: [tool_owner]
+      fail_closed_present: true
+      errors_present: true
+      coverage_unevaluated:
+        - caller: Flow.sink
+          kind: unresolved
+          name: pool.shutdown
+        - caller: Flow.wire
+          kind: lambda_dispatch
+          name: lambda
+        - caller: Flow.wire
+          kind: unresolved
+          name: pool.submit
+      deterministic_stdout: true
+
+  - name: java-indirect-jdk-runnable-field-method-reference-fail-closed
+    group: adversarial
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/java-indirect-jdk-runnable-field-method-reference
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/java-indirect-jdk-runnable-field-method-reference/sink-registry.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      indirect_impact: []
+      shadow_hits: []
+      reviewer_required: [tool_owner]
+      fail_closed_present: true
+      errors_present: true
+      coverage_unevaluated:
+        - caller: Flow.sink
+          kind: unresolved
+          name: task.run
+        - caller: Flow.wire
+          kind: method_reference
+          name: vault::transfer
+      deterministic_stdout: true
+
+  - name: java-indirect-static-block-jdk-lambda-fail-closed
+    group: adversarial
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/java-indirect-static-block-jdk-lambda
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/java-indirect-static-block-jdk-lambda/sink-registry.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      indirect_impact: []
+      shadow_hits: []
+      reviewer_required: [tool_owner]
+      fail_closed_present: true
+      errors_present: true
+      coverage_unevaluated:
+        - caller: Flow.<clinit>
+          kind: lambda_dispatch
+          name: lambda
+        - caller: Flow.sink
+          kind: unresolved
+          name: task.run
+      deterministic_stdout: true
+
+  - name: java-indirect-static-field-jdk-lambda-fail-closed
+    group: adversarial
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/java-indirect-static-field-jdk-lambda
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/java-indirect-static-field-jdk-lambda/sink-registry.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      indirect_impact: []
+      shadow_hits: []
+      reviewer_required: [tool_owner]
+      fail_closed_present: true
+      errors_present: true
+      coverage_unevaluated:
+        - caller: Flow.<clinit>
+          kind: lambda_dispatch
+          name: lambda
+        - caller: Flow.sink
+          kind: unresolved
+          name: task.run
+      deterministic_stdout: true
+
+  - name: java-indirect-dispatch-target-intersection-pass
+    group: negative-corpus
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/java-indirect-dispatch-target-intersection-pass
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/java-indirect-dispatch-target-intersection-pass/sink-registry.yaml
+    expect:
+      verdict: pass
+      exit_code: 0
+      indirect_impact: []
+      shadow_hits: []
+      reviewer_required: []
+      fail_closed_present: false
+      errors_present: false
+      coverage_unevaluated_with_dispatch:
+        - caller: Flow.<init>
+          kind: lambda_dispatch
+          name: lambda
+          dispatch_targets: [Other.go]
+      deterministic_stdout: true
+
+  - name: java-indirect-opaque-list-dispatch-fail-closed
+    group: adversarial
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/java-indirect-opaque-list-dispatch
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/java-indirect-opaque-list-dispatch/sink-registry.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      indirect_impact: []
+      shadow_hits: []
+      reviewer_required: [tool_owner]
+      fail_closed_present: true
+      errors_present: true
+      coverage_unevaluated:
+        - caller: Flow.<init>
+          kind: lambda_dispatch
+          name: lambda
+        - caller: Flow.sink
+          kind: unresolved
+          name: tasks.get
+      deterministic_stdout: true
+
+  - name: java-indirect-opaque-getter-dispatch-fail-closed
+    group: adversarial
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/java-indirect-opaque-getter-dispatch
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/java-indirect-opaque-getter-dispatch/sink-registry.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      indirect_impact: []
+      shadow_hits: []
+      reviewer_required: [tool_owner]
+      fail_closed_present: true
+      errors_present: true
+      coverage_unevaluated:
+        - caller: Flow.<init>
+          kind: lambda_dispatch
+          name: lambda
+        - caller: Flow.sink
+          kind: unresolved
+          name: get
+      deterministic_stdout: true
+
+  - name: java-indirect-opaque-hop-boundary-fail-closed
+    group: adversarial
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/java-indirect-opaque-hop-boundary
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/java-indirect-opaque-hop-boundary/sink-registry.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      indirect_impact: []
+      shadow_hits: []
+      reviewer_required: [tool_owner]
+      fail_closed_present: true
+      errors_present: true
+      coverage_unevaluated:
+        - caller: Flow.<init>
+          kind: lambda_dispatch
+          name: lambda
+        - caller: Flow.mid
+          kind: unresolved
+          name: tasks.get
+      deterministic_stdout: true
+
+  - name: java-indirect-registry-lookup-lambda-fail-closed
+    group: adversarial
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/java-indirect-registry-lookup-lambda
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/java-indirect-registry-lookup-lambda/sink-registry.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      indirect_impact:
+        - sink_id: registry_lookup_lambda_sink
+          changed_function: Vault.transfer
+          path: [Flow.sink, Task.exec, Vault.transfer]
+          hops: 2
+          reviewer: security-reviewer
+          maturity: enforcing
+          inferred: true
+      shadow_hits: []
+      reviewer_required: [security-reviewer, tool_owner]
+      fail_closed_present: true
+      errors_present: true
+      coverage_unevaluated:
+        - caller: Flow.sink
+          kind: unresolved
+          name: reg.find
+        - caller: Flow.wire
+          kind: lambda_dispatch
+          name: lambda
+        - caller: Task.exec
+          kind: unresolved
+          name: new Vault
+      deterministic_stdout: true
+
+  - name: java-indirect-registry-lookup-method-reference-hop-boundary
+    group: adversarial
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/java-indirect-registry-lookup-method-reference-hop
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/java-indirect-registry-lookup-method-reference-hop/sink-registry.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      indirect_impact: []
+      shadow_hits: []
+      reviewer_required: [tool_owner]
+      fail_closed_present: true
+      errors_present: true
+      coverage_unevaluated:
+        - caller: Flow.mid
+          kind: unresolved
+          name: reg.find
+        - caller: Flow.wire
+          kind: method_reference
+          name: vault::transfer
+      deterministic_stdout: true
+
+  - name: java-indirect-observed-path-not-inferred
+    group: adversarial
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/java-indirect-observed-path
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/java-indirect-observed-path/sink-registry.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      indirect_impact:
+        - sink_id: observed_path_sink
+          changed_function: Vault.transfer
+          path: [Flow.sink, Task.exec, Vault.transfer]
+          hops: 2
+          reviewer: security-reviewer
+          maturity: enforcing
+      shadow_hits: []
+      reviewer_required: [security-reviewer, tool_owner]
+      fail_closed_present: true
+      errors_present: true
+      deterministic_stdout: true
+
+  - name: java-indirect-opaque-dead-end-detail
+    group: adversarial
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/java-indirect-opaque-dead-end-detail
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/java-indirect-opaque-dead-end-detail/sink-registry.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      indirect_impact: []
+      shadow_hits: []
+      reviewer_required: [tool_owner]
+      fail_closed_present: true
+      fail_closed_details:
+        - 1 deferred dispatch; dead_ends=Flow.sink
+      errors_present: true
+      deterministic_stdout: true
+
+  - name: java-indirect-dispatch-parameter-control-pass
+    group: negative-corpus
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/java-indirect-dispatch-parameter-control
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/java-indirect-dispatch-parameter-control/sink-registry.yaml
+    expect:
+      verdict: pass
+      exit_code: 0
+      indirect_impact: []
+      shadow_hits: []
+      reviewer_required: []
+      fail_closed_present: false
+      errors_present: false
+      coverage_unevaluated_with_dispatch:
+        - caller: Flow.<init>
+          kind: lambda_dispatch
+          name: lambda
+          dispatch_targets: [Other.go]
+      deterministic_stdout: true
+
+  - name: java-indirect-dispatch-local-control-pass
+    group: negative-corpus
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/java-indirect-dispatch-local-control
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/java-indirect-dispatch-local-control/sink-registry.yaml
+    expect:
+      verdict: pass
+      exit_code: 0
+      indirect_impact: []
+      shadow_hits: []
+      reviewer_required: []
+      fail_closed_present: false
+      errors_present: false
+      coverage_unevaluated_with_dispatch:
+        - caller: Flow.<init>
+          kind: lambda_dispatch
+          name: lambda
+          dispatch_targets: [Other.go]
+      deterministic_stdout: true
+
+  - name: java-indirect-deferred-no-sink-pass
+    group: negative-corpus
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/java-indirect-deferred-no-sink
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/java-indirect-deferred-no-sink/sink-registry.yaml
+    expect:
+      verdict: pass
+      exit_code: 0
+      indirect_impact: []
+      shadow_hits: []
+      reviewer_required: []
+      fail_closed_present: false
+      errors_present: false
+      coverage_unevaluated:
+        - caller: Flow.wire
+          kind: lambda_dispatch
+          name: lambda
+        - caller: Flow.wire
+          kind: unresolved
+          name: consume
+      deterministic_stdout: true
+
+  - name: java-indirect-deferred-unrelated-sink-pass
+    group: negative-corpus
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/java-indirect-deferred-unrelated-sink
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/java-indirect-deferred-unrelated-sink/sink-registry.yaml
+    expect:
+      verdict: pass
+      exit_code: 0
+      indirect_impact: []
+      shadow_hits: []
+      reviewer_required: []
+      fail_closed_present: false
+      errors_present: false
+      coverage_unevaluated:
+        - caller: Flow.wire
+          kind: lambda_dispatch
+          name: lambda
+        - caller: Flow.wire
+          kind: unresolved
+          name: consume
+      deterministic_stdout: true
+
+  - name: java-indirect-nested-anonymous-deep-coverage
+    group: adversarial
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/java-indirect-nested-anonymous-deep
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/java-indirect-nested-anonymous-deep/sink-registry.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      indirect_impact: []
+      shadow_hits: []
+      reviewer_required: [tool_owner]
+      fail_closed_present: true
+      errors_present: true
+      coverage_unevaluated:
+        - caller: Port.run
+          kind: anonymous_class
+          name: new Inner
+        - caller: Port.run
+          kind: anonymous_class
+          name: new Inner
+      deterministic_stdout: true
+
+  - name: java-indirect-nested-lambda-deep-coverage
+    group: adversarial
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/java-indirect-nested-lambda-deep
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/java-indirect-nested-lambda-deep/sink-registry.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      indirect_impact: []
+      shadow_hits: []
+      reviewer_required: [tool_owner]
+      fail_closed_present: true
+      errors_present: true
+      coverage_unevaluated:
+        - caller: Port.run
+          kind: lambda_dispatch
+          name: lambda
+        - caller: Port.run
+          kind: lambda_dispatch
+          name: lambda
+      deterministic_stdout: true
+
+  - name: java-indirect-nested-anonymous-fail-closed
+    group: adversarial
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/java-indirect-nested-anonymous
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/java-indirect-nested-anonymous/sink-registry.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      indirect_impact: []
+      shadow_hits: []
+      reviewer_required: [tool_owner]
+      fail_closed_present: true
+      errors_present: true
+      coverage_unevaluated:
+        - caller: Port.run
+          kind: anonymous_class
+          name: new Inner
+      deterministic_stdout: true
+
+  - name: java-indirect-nested-lambda-fail-closed
+    group: adversarial
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/java-indirect-nested-lambda
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/java-indirect-nested-lambda/sink-registry.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      indirect_impact: []
+      shadow_hits: []
+      reviewer_required: [tool_owner]
+      fail_closed_present: true
+      errors_present: true
+      coverage_unevaluated:
+        - caller: Port.run
+          kind: lambda_dispatch
+          name: lambda
+      deterministic_stdout: true
+
+  - name: indirect-routing-degenerate-fail-closed
+    group: adversarial
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/indirect-routing-degenerate
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/indirect-routing-degenerate/sink-registry.yaml
+      language_routing: tests/fixtures/language-routing/no-adapters.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      indirect_impact: []
+      shadow_hits: []
+      reviewer_required: [tool_owner]
+      fail_closed_present: true
+      errors_present: true
+      coverage_unevaluated:
+        - caller: app/flow.py
+          kind: language_routing_missing_adapter
+          name: python
+
+  - name: indirect-routing-partial-drift-fail-closed
+    group: adversarial
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/indirect-routing-partial
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/indirect-routing-partial/sink-registry.yaml
+      language_routing: tests/fixtures/language-routing/java-only.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      indirect_impact:
+        - sink_id: java_sink
+          changed_function: Flow.helper
+          path: [Flow.sink, Flow.helper]
+          hops: 1
+          reviewer: java-reviewer
+          maturity: enforcing
+      shadow_hits: []
+      reviewer_required: [java-reviewer, tool_owner]
+      fail_closed_present: true
+      errors_present: true
+      coverage_unevaluated:
+        - caller: app/flow.py
+          kind: language_routing_missing_adapter
+          name: python
+
+  - name: indirect-registry-multilang-java-only
+    group: adversarial
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/indirect-registry-multilang-java
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/indirect-registry-multilang-java/sink-registry.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      indirect_impact:
+        - sink_id: java_sink
+          changed_function: Flow.helper
+          path: [Flow.sink, Flow.helper]
+          hops: 1
+          reviewer: java-reviewer
+          maturity: enforcing
+      shadow_hits: []
+      reviewer_required: [java-reviewer]
+      fail_closed_present: false
+      errors_present: false
+
+  - name: indirect-registry-multilang-python-only
+    group: adversarial
+    gate: check-indirect-impact
+    input:
+      fixture_dir: tests/fixtures/indirect-registry-multilang-python
+      sensitive_zones: tests/fixtures/indirect-impact/sensitive-zones-empty.yaml
+      sink_registry: tests/fixtures/indirect-registry-multilang-python/sink-registry.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      indirect_impact:
+        - sink_id: py_sink
+          changed_function: app.flow.helper
+          path: [app.flow.sink, app.flow.helper]
+          hops: 1
+          reviewer: py-reviewer
+          maturity: enforcing
+      shadow_hits: []
+      reviewer_required: [py-reviewer]
+      fail_closed_present: false
+      errors_present: false
+
+  - name: metamorphic-import-alias
+    group: metamorphic
+    gate: extract-python-capabilities
+    input:
+      source_file: tests/fixtures/metamorphic/import-alias.py
+    expect:
+      exit_code: 0
+      capability_ids:
+        - subprocess_exec
+      capability_levels:
+        - protected
+      errors: []
+
+  - name: metamorphic-spacing-comments
+    group: metamorphic
+    gate: extract-python-capabilities
+    input:
+      source_file: tests/fixtures/metamorphic/spacing-comments.py
+    expect:
+      exit_code: 0
+      capability_ids:
+        - subprocess_exec
+      capability_levels:
+        - protected
+      errors: []
+
+  - name: metamorphic-function-order
+    group: metamorphic
+    gate: extract-python-capabilities
+    input:
+      source_file: tests/fixtures/metamorphic/function-order.py
+    expect:
+      exit_code: 0
+      capability_ids:
+        - subprocess_exec
+      capability_levels:
+        - protected
+      errors: []
+
+  - name: negative-corpus-capability-free-source
+    group: negative-corpus
+    gate: extract-python-capabilities
+    input:
+      source_file: tests/fixtures/negative-corpus/capability-free.py
+    expect:
+      exit_code: 0
+      capability_ids: []
+      capability_levels: []
+      unresolved_dynamic: []
+      errors: []
+
+  - name: negative-corpus-harmless-python-change
+    group: negative-corpus
+    gate: check-new-capabilities
+    input:
+      fixture_dir: tests/fixtures/negative-corpus/harmless-python
+    expect:
+      verdict: pass
+      exit_code: 0
+      new_capabilities: []
+      warned_capabilities: []
+      fail_closed: []
+      errors_present: false
+
+  - name: negative-corpus-docs-only-change
+    group: negative-corpus
+    gate: check-new-capabilities
+    input:
+      fixture_dir: tests/fixtures/negative-corpus/docs-only
+    expect:
+      verdict: pass
+      exit_code: 0
+      new_capabilities: []
+      warned_capabilities: []
+      fail_closed: []
+      errors_present: false
+
+  - name: java-capabilities
+    gate: extract-java-capabilities
+    input:
+      source_file: tests/fixtures/java-capabilities/valid.java
+    expect:
+      exit_code: 0
+      capability_ids:
+        - command_exec
+        - crypto
+        - crypto_hash
+        - jndi_lookup
+        - outbound_http
+        - reflection
+        - sql_injection_surface
+        - unsafe_deserialization
+      capability_levels:
+        - protected
+        - protected
+        - watched
+        - protected
+        - protected
+        - protected
+        - protected
+        - protected
+      unresolved_dynamic:
+        - kind: method_invocation
+          name: invoke
+          line: 17
+          reason: receiver type unresolved
+      errors: []
+      deterministic_stdout: true
+
+  - name: java-capabilities-parse-error
+    gate: extract-java-capabilities
+    input:
+      source_file: tests/fixtures/java-capabilities/invalid.java
+    expect:
+      exit_code: 0
+      capability_ids: []
+      parse_error_present: true
+      errors: []
+
+  - name: java-capabilities-uninformative-bindings
+    gate: extract-java-capabilities
+    input:
+      source_file: tests/fixtures/java-capabilities/uninformative-bindings.java
+    expect:
+      exit_code: 0
+      capability_ids: []
+      unresolved_dynamic:
+        - kind: method_invocation
+          name: invoke
+          line: 4
+          reason: receiver type unresolved
+        - kind: method_invocation
+          name: invoke
+          line: 5
+          reason: receiver type unresolved
+      errors: []
+
+  - name: java-capabilities-frozen-clamp
+    gate: check-new-capabilities
+    input:
+      fixture_dir: tests/fixtures/new-java-capabilities/new-only
+      java_policy: tests/fixtures/java-capabilities/frozen-policy.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      new_capabilities:
+        - path: app/Job.java
+          id: command_exec
+          level: protected
+          reviewer: security-reviewer
+          signal_names:
+            - Runtime.exec
+            - Runtime.getRuntime
+            - exec
+      warned_capabilities: []
+      fail_closed: []
+      errors_present: true
+
+  - name: new-java-capabilities-new-only
+    gate: check-new-capabilities
+    input:
+      fixture_dir: tests/fixtures/new-java-capabilities/new-only
+      java_policy: policies/java-sensitive-capabilities.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      new_capabilities:
+        - path: app/Job.java
+          id: command_exec
+          level: protected
+          reviewer: security-reviewer
+          signal_names:
+            - Runtime.exec
+            - Runtime.getRuntime
+            - exec
+      warned_capabilities: []
+      fail_closed: []
+      errors_present: false
+
+  - name: new-java-capabilities-existing-pass
+    gate: check-new-capabilities
+    input:
+      fixture_dir: tests/fixtures/new-java-capabilities/existing
+      java_policy: policies/java-sensitive-capabilities.yaml
+    expect:
+      verdict: pass
+      exit_code: 0
+      new_capabilities: []
+      warned_capabilities: []
+      fail_closed: []
+      errors_present: false
+
+  - name: new-java-capabilities-delete-pass
+    gate: check-new-capabilities
+    input:
+      fixture_dir: tests/fixtures/new-java-capabilities/delete-only
+      java_policy: policies/java-sensitive-capabilities.yaml
+    expect:
+      verdict: pass
+      exit_code: 0
+      new_capabilities: []
+      warned_capabilities: []
+      fail_closed: []
+      errors_present: false
+
+  - name: new-java-capabilities-parse-error
+    gate: check-new-capabilities
+    input:
+      fixture_dir: tests/fixtures/new-java-capabilities/parse-error
+      java_policy: policies/java-sensitive-capabilities.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      new_capabilities: []
+      warned_capabilities: []
+      fail_closed:
+        - path: app/Job.java
+          level: protected
+          reason: head file could not be parsed after the change
+      errors_present: true
+
+  - name: new-java-capabilities-python-benign-no-contamination
+    gate: check-new-capabilities
+    input:
+      fixture_dir: tests/fixtures/new-java-capabilities/python-benign
+      java_policy: policies/java-sensitive-capabilities.yaml
+    expect:
+      verdict: pass
+      exit_code: 0
+      new_capabilities: []
+      warned_capabilities: []
+      fail_closed: []
+      errors_present: false
+
+  - name: new-java-capabilities-python-benign-missing-java-policy
+    gate: check-new-capabilities
+    input:
+      fixture_dir: tests/fixtures/new-java-capabilities/python-benign
+      java_policy: tests/fixtures/java-capabilities/missing-policy.yaml
+    expect:
+      verdict: pass
+      exit_code: 0
+      new_capabilities: []
+      warned_capabilities: []
+      fail_closed: []
+      errors_present: false
+
+  - name: parity-java-capability-new
+    group: parity
+    gate: check-new-capabilities
+    input:
+      fixture_dir: tests/fixtures/parity/java-capability-new
+      java_policy: policies/java-sensitive-capabilities.yaml
+    expect:
+      verdict: approval_required
+      exit_code: 2
+      new_capabilities:
+        - path: app/Worker.java
+          id: command_exec
+          level: protected
+          reviewer: security-reviewer
+          signal_names:
+            - Runtime.exec
+            - Runtime.getRuntime
+            - exec
+      warned_capabilities: []
+      fail_closed: []
+      errors_present: false
+
+  - name: parity-java-capability-existing
+    group: parity
+    gate: check-new-capabilities
+    input:
+      fixture_dir: tests/fixtures/parity/java-capability-existing
+      java_policy: policies/java-sensitive-capabilities.yaml
+    expect:
+      verdict: pass
+      exit_code: 0
+      new_capabilities: []
+      warned_capabilities: []
+      fail_closed: []
+      errors_present: false
+
+  - name: parity-java-capability-delete
+    group: parity
+    gate: check-new-capabilities
+    input:
+      fixture_dir: tests/fixtures/parity/java-capability-delete
+      java_policy: policies/java-sensitive-capabilities.yaml
+    expect:
+      verdict: pass
+      exit_code: 0
+      new_capabilities: []
+      warned_capabilities: []
+      fail_closed: []
+      errors_present: false

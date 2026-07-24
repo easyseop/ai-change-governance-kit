@@ -1,0 +1,12 @@
+# original comment
+policy_version: "test"
+defaults:
+  block_levels: [frozen]
+  approve_levels: [protected]
+  warn_levels: [watched]
+zones:
+  - path: "services/auth/**"
+    level: protected
+    reason: auth boundary
+    required_approval: security-reviewer
+    tier: 1

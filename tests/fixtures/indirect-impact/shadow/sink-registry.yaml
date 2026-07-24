@@ -1,0 +1,11 @@
+policy_version: "0.1-mvp2"
+defaults:
+  maturity: shadow
+  hops: 1
+sinks:
+  - id: report_download_shadow
+    function: app.reports.download_report
+    reason: PII report export shadow
+    owner: security-reviewer
+    maturity: shadow
+    hops: 1

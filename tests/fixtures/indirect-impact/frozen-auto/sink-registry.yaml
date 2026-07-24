@@ -1,0 +1,5 @@
+policy_version: "0.1-mvp2"
+defaults:
+  maturity: shadow
+  hops: 1
+sinks: []

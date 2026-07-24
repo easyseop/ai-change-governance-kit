@@ -1,0 +1,3 @@
+defaults: {maturity: enforcing, hops: 4}
+sinks:
+  - {id: deferred_body_method_reference_sink, function: Flow.sink, reason: deferred body method reference dispatch, owner: security-reviewer}

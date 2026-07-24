@@ -1,0 +1,104 @@
+# =====================================================================
+# manifest.yaml — AI Change Governance Kit (spine 계약 선언)
+# =====================================================================
+# 이 킷이 spine 오케스트레이터에 "나는 이 게이트·정책·입력·증거가 필요하다"를
+# 선언한다. spine 은 판단하지 않고 이 선언대로 러너를 호출·증거를 수집한다.
+#
+# ⚠️ 상태: Draft — 실제 프로덕션 spine 계약(apiVersion·필드명)을 소스로
+#    검증하지 못했다(kit-변환-검토 §7). 아래는 Harness-work TO-BE 규격 기준
+#    초안이며 spine 오너 확인 후 필드명 정합 필요.
+# =====================================================================
+apiVersion: harness-spine/v1
+kind: kit
+metadata:
+  name: ai-change-governance
+  version: "0.3.4-mvp3-java-l3"         # 완료 MVP 스냅샷 (sync-from-dev.sh 로 갱신)
+  reflects_mvp: [MVP-0, MVP-1, MVP-1.5, MVP-2, MVP-3-J0, MVP-3-J1, MVP-3-J2, MVP-3-J3, MVP-3-Java-L3-partial]
+  description: >
+    AI 가 만든 코드 변경(diff)을 결정적으로 걸러 "선언 의도 밖 / 필수 변경 파일 부재 /
+    민감영역 접촉 / 신규 위험능력 / sink 간접영향 / 정책 자기무력화"만 사람 승인으로 라우팅하는 게이트. 판정에 LLM 없음.
+
+# ── spine 단계(hook): 이 킷은 verify 단계의 변경 거버넌스 관심사 ──────
+hooks:
+  verify:
+    - id: change-governance
+      run: run.sh                       # 러너 계약: bash · 위치인자 · cwd=kit · exit 0/1/2
+      args: ["${RANGE}", "--repo", "${TARGET_REPO}"]
+      appliesWhen:
+        changed: ["**/*"]               # 코드 변경 있으면 항상 적용
+      produces:
+        - evidence/change-evidence.yaml
+
+# ── 조립되는 게이트 전량(★누락 검증용 명시 목록 — 21종) ──────────────
+# runtime_verdict = run.sh 가 조립하는 판정 게이트
+# extraction_internal = 판정 게이트가 내부 import(Path(__file__).parent) — 직접 호출 안 하나 co-located 필수
+# tools_offline = spine hook 아님(온보딩/CI) — bootstrap.sh·selftest.sh 로 별도 진입
+gates:
+  runtime_verdict:
+    - { id: check-change-intent,        layer: L1,        verdict: [pass, approval_required, blocked], detects: [scope_violation, missing_expected_paths] }
+    - { id: check-sensitive-zones,      layer: L1,        verdict: [pass, approval_required, blocked] }
+    - { id: check-function-gov-level,   layer: L1,        verdict: [pass, approval_required, blocked], detects: [python_gov_annotations, java_gov_annotations, java_framework_annotations] }
+    - { id: check-new-capabilities,     layer: L2,        verdict: [pass, approval_required], detects: [python_sensitive_capabilities, java_sensitive_capabilities] }
+    - { id: check-indirect-impact,      layer: L3,        verdict: [pass, approval_required] }
+    - { id: check-policy-change,        layer: meta,      verdict: [pass, approval_required] }
+    - { id: generate-change-evidence,   layer: aggregate, produces: audit_card }
+  extraction_internal:
+    - extract-python-inventory
+    - map-diff-to-functions
+    - classify-python-function-changes
+    - extract-gov-annotations
+    - extract-python-capabilities
+    - extract-java-capabilities
+    - extract-java-callgraph
+    - extract-sinks
+    - extract-callgraph
+  tools_offline:
+    - bootstrap-sensitive-zones         # 온보딩 씨딩 (bootstrap.sh)
+    - bootstrap-sensitive-functions     # 온보딩 씨딩 (bootstrap.sh)
+  language_j0:
+    - language-router                   # 확장자별 deep-analysis 어댑터 라우팅·coverage
+    - check-tree-sitter-languages       # pinned tree-sitter Java/JS/TS/TSX 로드·파싱 스모크
+  language_j1:
+    - extract-java-inventory            # Java 클래스/메서드/생성자 인벤토리 추출
+
+coverage_limits:
+  java_callgraph:
+    status: partial
+    notes:
+      - "보수적 전방폐쇄에서 외부 호출을 하나라도 만나면 deferred dispatch가 승인요구로 승격될 수 있음(O-14)"
+      - "indirect_impact.inferred=true 는 실제 관측 호출이 아니라 보수 추정 홉이 포함됐다는 뜻"
+      - "fail_closed detail의 dead_ends에는 해당 레코드와 무관한 이름이 섞일 수 있음(O-22)"
+
+# ── 정책(코드 밖 YAML · inline 금지) ─────────────────────────────────
+policies:
+  - policies/sensitive-zones.yaml
+  - policies/sensitive-capabilities.yaml
+  - policies/java-sensitive-capabilities.yaml
+  - policies/approval-routing.yaml
+  - policies/sink-registry.yaml
+  - policies/language-routing.yaml
+  - policies/framework-annotations.yaml
+  # change-intent 는 대상 repo 가 제공(킷은 template/example 만 동봉)
+
+# ── 증거 산출(선언 경로 + 스키마) ────────────────────────────────────
+evidence:
+  - path: evidence/change-evidence.yaml
+    schema: templates/change-evidence.template.yaml
+
+# ── 입력 계약 ────────────────────────────────────────────────────────
+inputs:
+  range:        { desc: "git base..head rev-range", required: true }
+  target_repo:  { desc: "검사 대상 저장소 경로", default: "." }
+  change_intent: { desc: "대상 repo 의 change-intent.yaml(없으면 의도층 fail-closed=blocked)", required: false }
+
+# ── ★알려진 갭 — 판정 3단계 → spine 2단계 손실 ──────────────────────
+verdict_mapping:
+  pass:              passed
+  approval_required: warning     # 또는 waiverable 게이트 — spine 오너와 합의 필요
+  blocked:           failed
+  KNOWN_GAP: >
+    spine 러너 판정은 exit 0=pass / 비0=fail(2단계)이라 승인요구(2)와 차단(1)이
+    둘 다 fail 로 뭉개질 위험. 이 킷의 핵심(위험을 *차단이 아니라 사람에게 올림*)이
+    훼손될 수 있음. 완전 해결 = ADR-002 `acgh-result` 정본 결과계약 구현(현재 미구현).
+    그때까지 위 매핑은 draft 이며, requires_approval 을 warning/failed 로 낮추면
+    lossy 로 표시하고 원본 change-evidence.yaml 을 증거로 첨부할 것.

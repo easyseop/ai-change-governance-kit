@@ -1,0 +1,3 @@
+defaults:
+  block_levels: [frozen]
+zones: []

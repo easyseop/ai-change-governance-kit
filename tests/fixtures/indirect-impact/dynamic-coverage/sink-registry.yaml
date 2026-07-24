@@ -1,0 +1,11 @@
+policy_version: "0.1-mvp2"
+defaults:
+  maturity: shadow
+  hops: 1
+sinks:
+  - id: dynamic_report
+    function: app.reports.download_report
+    reason: Dynamic report export
+    owner: security-reviewer
+    maturity: enforcing
+    hops: 1

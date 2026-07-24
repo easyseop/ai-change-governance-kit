@@ -1,0 +1,3 @@
+/src/security/** @bank/security
+/db/migrations/** @bank/dba
+/docs/** @bank/docs

@@ -1,0 +1,39 @@
+bootstrap_sensitive_zones:
+  generated_by: bootstrap-sensitive-zones
+  source_repo: fixture
+  mode: draft_only
+  summary:
+    candidate_count: 2
+    suppressed_accepted: 0
+    suppressed_rejected: 0
+    codeowners_read: true
+  candidates:
+    - path: db/migrations/**
+      level: protected
+      reason: database migration path token
+      status: accepted
+      fingerprint: f2d0592eb1f50e4a4a36e215b23c13812d6b6374970080b907e16315c10a7a58
+      rejected_reason: null
+      rejected_by: null
+      evidence:
+        - source: codeowners
+          rule_id: dba-owned
+          matched: db/migrations/**
+          path: db/migrations/**
+          owner: "@bank/dba"
+        - source: path_naming
+          rule_id: migration-token
+          matched: migrations
+          path: db/migrations/001_init.sql
+    - path: services/auth/**
+      level: protected
+      reason: authentication path token
+      status: rejected
+      fingerprint: 92efc7c98a5a8697380309a4490103ac4ecf9caa4a7084437291d70601f77f12
+      rejected_reason: too broad for this repo
+      rejected_by: security-reviewer
+      evidence:
+        - source: path_naming
+          rule_id: auth-token
+          matched: auth
+          path: services/auth/login.py

@@ -1,0 +1,19 @@
+policy_version: "test-maturity"
+
+defaults:
+  unlisted_level: free
+  block_levels: [frozen]
+  approve_levels: [protected]
+  warn_levels: [watched]
+
+zones:
+  - path: "app/shadow/**"
+    level: protected
+    maturity: shadow
+    reason: shadow rollout protected zone
+    required_approval: security-reviewer
+  - path: "app/enforcing/**"
+    level: protected
+    maturity: enforcing
+    reason: enforcing protected zone
+    required_approval: security-reviewer

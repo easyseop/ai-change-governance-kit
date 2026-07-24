@@ -1,0 +1,14 @@
+policy_version: invalid-layer
+defaults:
+  layer_states: [supported, partial, stub, unsupported]
+adapters:
+  java:
+    status: stub
+    layers:
+      inventory: Supported
+      gov_level: supported
+      capabilities: stub
+      callgraph: stub
+    parser: tree-sitter
+    extensions:
+      - .java

@@ -1,0 +1,8 @@
+change_intent:
+  requirement_id: REQ-TEST-OOS
+  author: codex
+  allowed_paths:
+    - app/features/**
+  forbidden_paths:
+    - secrets/**
+    - "**/secrets/**"

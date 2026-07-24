@@ -1,0 +1,3 @@
+defaults: {maturity: enforcing, hops: 4}
+sinks:
+  - {id: static_field_jdk_lambda_sink, function: Flow.sink, reason: static field JDK lambda dispatch, owner: security-reviewer}

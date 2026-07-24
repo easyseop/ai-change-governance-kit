@@ -1,0 +1,11 @@
+policy_version: "0.1-mvp2"
+defaults:
+  maturity: shadow
+  hops: 1
+sinks:
+  - id: method_report_export
+    function: app.reports.ReportService.export
+    reason: Method report export
+    owner: security-reviewer
+    maturity: enforcing
+    hops: 1

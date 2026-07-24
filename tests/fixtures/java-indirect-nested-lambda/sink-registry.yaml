@@ -1,0 +1,3 @@
+defaults: {maturity: enforcing, hops: 4}
+sinks:
+  - {id: nested_lambda_sink, function: Flow.sink, reason: nested lambda dispatch, owner: security-reviewer}

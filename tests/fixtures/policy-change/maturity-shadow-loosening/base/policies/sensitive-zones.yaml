@@ -1,0 +1,10 @@
+policy_version: "test"
+defaults:
+  block_levels: [frozen]
+  approve_levels: [protected]
+  warn_levels: [watched]
+zones:
+  - path: "app/pay/**"
+    level: frozen
+    reason: settlement core
+    tier: 1

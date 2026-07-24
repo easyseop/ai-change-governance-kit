@@ -1,0 +1,3 @@
+defaults: {maturity: enforcing, hops: 4}
+sinks:
+  - {id: jdk_runnable_lambda_sink, function: Flow.sink, reason: JDK Runnable lambda dispatch, owner: security-reviewer}

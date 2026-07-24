@@ -1,0 +1,272 @@
+# =====================================================================
+# framework-annotations.yaml · 프레임워크 어노테이션 카탈로그 (MVP-3 J2)
+# =====================================================================
+# 소유: Claude(정책 소유자). Codex 는 이 파일을 수정하지 않는다 — AGENTS.md·CLAUDE.md §1.
+# 근거: TASK-031 AC#2 · Q-0005 · collab/answers/A-0032.md · decisions D-075.
+#
+# 무엇인가:
+#   Java 소스의 프레임워크 어노테이션(Spring/Jakarta)을 **함수레벨 민감도 신호**로 번역하는 표.
+#   `@Gov(level=...)` 이 저자의 **명시 선언**이라면, 이 표는 프레임워크 관용구에서 **추론**한 신호다.
+#
+# 🔴 불변식 (어기면 검증오류 — 게이트는 fail-closed):
+#   1. 이 카탈로그의 level 은 **protected | watched 만**. `frozen` 금지.
+#      이유: 추론 신호는 2·3층이고, 2·3층은 **자동 차단 금지**(CLAUDE.md §4 · D-004).
+#      `@Transactional` 을 붙인 사람이 "이 함수를 얼려달라"고 말한 적은 없다.
+#      정책에 frozen 이 오면 → **검증오류 기록 + protected 로 clamp**(조용히 무시 금지).
+#      대비: `@Gov(level=frozen)` 은 저자의 명시 선언이므로 1층 등가 → blocked 가능(AC#1).
+#      따라서 게이트는 신호의 **출처(declared @Gov vs inferred framework)를 구분해 유지**해야 한다.
+#   2. **매칭은 마지막 점-세그먼트 기준**. Java 는 `@PreAuthorize` 와
+#      `@org.springframework.security.access.prepost.PreAuthorize` 를 **둘 다 허용**한다.
+#      원문 토큰 그대로 비교하면 FQN 인라인 표기를 **놓친다 = 과소탐 = parity 위반**.
+#      아래 `name` 은 simple name 이고, 게이트는 어노테이션 이름의 마지막 세그먼트로 대조한다.
+#      (`fqns` 는 감사·문서용이며 매칭에 쓰지 않는다 — 임포트 해소는 이 층의 범위 밖.)
+#   3. **entrypoint 는 판정에 영향을 주지 않는다**. verdict 는 오직 `level` 에서 나온다.
+#      entrypoint: true 는 "외부에서 직접 도달 가능한 표면"이라는 **메타데이터**로 카드에 노출되고,
+#      후속 L3(콜그래프·간접영향)의 진입점 시드로 쓰인다. 이걸로 등급을 올리지 마라(등급 드리프트 금지).
+#   4. **중복 name 금지** — 같은 simple name 이 두 번 나오면 검증오류(마지막 항목 조용히 승리 금지).
+#   5. 인자 조건(`when`)이 **결정적으로 해소되지 않으면 매칭으로 취급**한다(보수적 과탐).
+#      MVP-3 공통 규칙: 불완전성은 **항상 approval 쪽으로 반올림 — 놓침 금지**.
+#      예: `@Query(nativeQuery = SOME_CONSTANT)` → 상수값을 추정하지 않는다 → protected 로 본다.
+#
+# 출처 메타데이터(TASK-016 AC#8 계보 — "이 목록 왜 믿나"를 파일 자체로 답한다):
+#   source : 근거 출처. `framework: <artifact>`(프레임워크 공식 의미론) ·
+#            `builtin: cwe|owasp|bandit`(공인 위험 카탈로그) · `org: <팀>`(우리 조직 판단).
+#            게이트는 이 필드를 읽지 않는다(문서용·감사용).
+#   owner  : 이 항목을 유지·소유하는 책임 주체. 등급 변경은 이 주체의 판단.
+#   reviewer: 승인 라우팅 힌트(approval-routing.yaml 의 reviewer 이름과 동일 어휘).
+#   reason : 카드에 그대로 실릴 한 줄. 사람이 30초 안에 위험을 파악할 문장으로.
+# =====================================================================
+
+policy_version: "0.1-mvp3-j2"
+
+defaults:
+  # 추론 신호층 상한 — 이 카탈로그만으로는 절대 blocked 로 승격 금지 (불변식 1)
+  max_verdict:    approval_required
+  allowed_levels: [protected, watched]   # frozen 오면 검증오류 + protected clamp
+  approve_levels: [protected]
+  warn_levels:    [watched]
+  # 어노테이션 제거 우회 방지 — 판정은 base·head 양측의 max (TASK-031 AC#3)
+  base_head_max:  true
+  # 인자 조건 미해소 시의 태도 (불변식 5)
+  unresolved_argument: match
+
+annotations:
+  # ---- 🟠 인가 경계 (security boundary) ----
+  - name: PreAuthorize
+    level: protected
+    entrypoint: false
+    reason: 메서드 진입 전 인가 규칙 — 변경 시 접근통제가 직접 바뀐다
+    reviewer: security-reviewer
+    fqns: [org.springframework.security.access.prepost.PreAuthorize]
+    source:
+      framework: spring-security
+      builtin: cwe          # CWE-285 Improper Authorization
+    owner: security-reviewer
+
+  - name: PostAuthorize
+    level: protected
+    entrypoint: false
+    reason: 반환값 기준 인가 규칙 — 변경 시 데이터 노출 범위가 바뀐다
+    reviewer: security-reviewer
+    fqns: [org.springframework.security.access.prepost.PostAuthorize]
+    source:
+      framework: spring-security
+      builtin: cwe          # CWE-285
+    owner: security-reviewer
+
+  - name: Secured
+    level: protected
+    entrypoint: false
+    reason: 역할 기반 접근통제 선언 — 변경 시 권한 경계가 이동한다
+    reviewer: security-reviewer
+    fqns: [org.springframework.security.access.annotation.Secured]
+    source:
+      framework: spring-security
+      builtin: cwe          # CWE-285
+    owner: security-reviewer
+
+  - name: RolesAllowed
+    level: protected
+    entrypoint: false
+    reason: JSR-250 역할 제한 — 변경 시 권한 경계가 이동한다
+    reviewer: security-reviewer
+    fqns: [jakarta.annotation.security.RolesAllowed, javax.annotation.security.RolesAllowed]
+    source:
+      framework: jakarta-annotations
+      builtin: cwe          # CWE-285
+    owner: security-reviewer
+
+  - name: PermitAll
+    level: protected
+    entrypoint: false
+    reason: 인가 해제 선언 — 붙이면 무인증 접근 허용, 인가 약화의 가장 직접적 신호
+    reviewer: security-reviewer
+    fqns: [jakarta.annotation.security.PermitAll, javax.annotation.security.PermitAll]
+    source:
+      framework: jakarta-annotations
+      builtin: cwe          # CWE-306 Missing Authentication
+    owner: security-reviewer
+
+  - name: DenyAll
+    level: protected
+    entrypoint: false
+    reason: 전면 차단 선언 — 제거 시 막혀 있던 경로가 열린다(base 지배로 포착)
+    reviewer: security-reviewer
+    fqns: [jakarta.annotation.security.DenyAll, javax.annotation.security.DenyAll]
+    source:
+      framework: jakarta-annotations
+      builtin: cwe          # CWE-285
+    owner: security-reviewer
+
+  # ---- 🟠 데이터 무결성·영속성 ----
+  - name: Query
+    level: protected
+    entrypoint: false
+    # 조건부: JPQL `@Query` 는 신호 아님. nativeQuery=true 만 원시 SQL 표면.
+    when:
+      argument: nativeQuery
+      equals: "true"
+    reason: 네이티브 SQL 직접 실행 — ORM 우회로 인젝션·스키마 결합 표면이 열린다
+    reviewer: dba-reviewer
+    fqns: [org.springframework.data.jpa.repository.Query]
+    source:
+      framework: spring-data-jpa
+      builtin: cwe          # CWE-89 SQL Injection
+    owner: dba-reviewer
+
+  - name: Modifying
+    level: protected
+    entrypoint: false
+    reason: 리포지토리 쓰기/삭제 쿼리 — 데이터 변형이 직접 발생한다
+    reviewer: dba-reviewer
+    fqns: [org.springframework.data.jpa.repository.Modifying]
+    source:
+      framework: spring-data-jpa
+      org: governance-wg
+    owner: dba-reviewer
+
+  - name: Transactional
+    level: watched
+    entrypoint: false
+    reason: 트랜잭션 경계 — 전파·격리 변경이 정합성에 영향(참고 표시)
+    reviewer: dba-reviewer
+    fqns:
+      - org.springframework.transaction.annotation.Transactional
+      - jakarta.transaction.Transactional
+      - javax.transaction.Transactional
+    source:
+      framework: spring-tx
+      org: governance-wg
+    owner: dba-reviewer
+
+  # ---- 🟡 HTTP 진입점 (외부 도달 표면) ----
+  # level 은 watched(참고). 등급을 올리는 건 이 표가 아니라 경로층·@Gov 다.
+  - name: RequestMapping
+    level: watched
+    entrypoint: true
+    reason: HTTP 진입점 매핑 — 외부에서 직접 도달 가능한 표면
+    reviewer: api-owner
+    fqns: [org.springframework.web.bind.annotation.RequestMapping]
+    source:
+      framework: spring-web
+      org: governance-wg
+    owner: api-owner
+
+  - name: GetMapping
+    level: watched
+    entrypoint: true
+    reason: HTTP GET 진입점 — 외부에서 직접 도달 가능한 표면
+    reviewer: api-owner
+    fqns: [org.springframework.web.bind.annotation.GetMapping]
+    source:
+      framework: spring-web
+      org: governance-wg
+    owner: api-owner
+
+  - name: PostMapping
+    level: watched
+    entrypoint: true
+    reason: HTTP POST 진입점 — 외부에서 상태를 바꾸는 표면
+    reviewer: api-owner
+    fqns: [org.springframework.web.bind.annotation.PostMapping]
+    source:
+      framework: spring-web
+      org: governance-wg
+    owner: api-owner
+
+  - name: PutMapping
+    level: watched
+    entrypoint: true
+    reason: HTTP PUT 진입점 — 외부에서 상태를 바꾸는 표면
+    reviewer: api-owner
+    fqns: [org.springframework.web.bind.annotation.PutMapping]
+    source:
+      framework: spring-web
+      org: governance-wg
+    owner: api-owner
+
+  - name: PatchMapping
+    level: watched
+    entrypoint: true
+    reason: HTTP PATCH 진입점 — 외부에서 상태를 바꾸는 표면
+    reviewer: api-owner
+    fqns: [org.springframework.web.bind.annotation.PatchMapping]
+    source:
+      framework: spring-web
+      org: governance-wg
+    owner: api-owner
+
+  - name: DeleteMapping
+    level: watched
+    entrypoint: true
+    reason: HTTP DELETE 진입점 — 외부에서 데이터를 제거하는 표면
+    reviewer: api-owner
+    fqns: [org.springframework.web.bind.annotation.DeleteMapping]
+    source:
+      framework: spring-web
+      org: governance-wg
+    owner: api-owner
+
+  # ---- 🟡 비-HTTP 진입점 (스케줄·이벤트·메시지) ----
+  - name: Scheduled
+    level: watched
+    entrypoint: true
+    reason: 스케줄 자동 실행 진입점 — 사람 조작 없이 주기 실행된다
+    reviewer: platform-reviewer
+    fqns: [org.springframework.scheduling.annotation.Scheduled]
+    source:
+      framework: spring-context
+      org: governance-wg
+    owner: platform-reviewer
+
+  - name: EventListener
+    level: watched
+    entrypoint: true
+    reason: 이벤트 수신 진입점 — 호출부가 코드상 보이지 않는다(간접 도달)
+    reviewer: platform-reviewer
+    fqns: [org.springframework.context.event.EventListener]
+    source:
+      framework: spring-context
+      org: governance-wg
+    owner: platform-reviewer
+
+  - name: KafkaListener
+    level: watched
+    entrypoint: true
+    reason: 메시지 소비 진입점 — 외부 토픽 입력이 직접 흘러든다
+    reviewer: platform-reviewer
+    fqns: [org.springframework.kafka.annotation.KafkaListener]
+    source:
+      framework: spring-kafka
+      org: governance-wg
+    owner: platform-reviewer
+
+# =====================================================================
+# 정직성 한계 (설계 §5 · TASK-031 AC#6 — 카드 coverage 에 노출할 것):
+#   - 이 층은 **선언 기반**이다. AOP 프록시가 실제로 적용됐는지(self-invocation,
+#     final 메서드, 프록시 미적용 빈)는 **런타임 사실**이라 여기서 볼 수 없다.
+#   - 클래스 레벨 어노테이션의 메서드 상속(`@RequestMapping` 클래스 + 메서드),
+#     메타-어노테이션(커스텀 `@interface` 가 `@PreAuthorize` 를 합성)은 **이 표로 안 잡힌다**.
+#     → 놓침이므로 coverage 에 명시할 것. 조용한 통과 금지.
+#   - 조직 커스텀 어노테이션은 조직이 이 파일에 추가한다(하드코딩 금지).
+# =====================================================================

@@ -1,0 +1,3 @@
+defaults: {maturity: enforcing, hops: 4}
+sinks:
+  - {id: jdk_noise_sink, function: Flow.sink, reason: sink closure has ordinary JDK call, owner: security-reviewer}

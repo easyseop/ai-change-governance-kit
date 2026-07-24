@@ -1,0 +1,3 @@
+defaults: {maturity: enforcing, hops: 4}
+sinks:
+  - {id: deferred_body_method_reference_unresolved_sink, function: Flow.sink, reason: unresolved method reference inside deferred body, owner: security-reviewer}

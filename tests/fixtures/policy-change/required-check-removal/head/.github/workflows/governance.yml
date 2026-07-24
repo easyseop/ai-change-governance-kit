@@ -1,0 +1,11 @@
+name: governance
+
+on:
+  pull_request:
+
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    steps:
+      - name: governance check
+        run: python3 .harness/gates/check-policy-change.py "$@"

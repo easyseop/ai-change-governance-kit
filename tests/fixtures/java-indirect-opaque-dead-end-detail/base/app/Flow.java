@@ -1,0 +1,7 @@
+interface Task { void exec(); }
+class Vault { void transfer() { int value = 1; } }
+class Flow {
+    Task task = () -> new Vault().transfer();
+    Object registry;
+    void sink() { registry.find("pay").exec(); }
+}

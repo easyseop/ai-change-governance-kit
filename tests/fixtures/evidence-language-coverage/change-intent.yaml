@@ -1,0 +1,8 @@
+change_intent:
+  requirement_id: REQ-LANG-COVERAGE
+  author: codex
+  allowed_paths:
+    - app/**
+    - cmd/**
+    - web/**
+  forbidden_paths: []

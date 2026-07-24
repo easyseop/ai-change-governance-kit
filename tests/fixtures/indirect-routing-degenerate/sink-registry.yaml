@@ -1,0 +1,3 @@
+defaults: {maturity: enforcing, hops: 1}
+sinks:
+  - {id: py_sink, function: app.flow.sink, reason: routing drift, owner: py-reviewer}

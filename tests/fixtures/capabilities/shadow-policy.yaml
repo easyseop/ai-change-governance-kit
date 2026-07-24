@@ -1,0 +1,18 @@
+policy_version: "test-shadow"
+
+defaults:
+  max_verdict: approval_required
+  allowed_levels: [protected, watched]
+  approve_levels: [protected]
+  warn_levels: [watched]
+  new_only: true
+
+capabilities:
+  - id: outbound_network
+    title: External network
+    level: protected
+    maturity: shadow
+    reason: shadow rollout network capability
+    reviewer: security-reviewer
+    signals:
+      imports: [requests]

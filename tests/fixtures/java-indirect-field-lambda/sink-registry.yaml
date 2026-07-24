@@ -1,0 +1,3 @@
+defaults: {maturity: enforcing, hops: 4}
+sinks:
+  - {id: field_lambda_sink, function: Flow.sink, reason: field initializer lambda dispatch, owner: security-reviewer}

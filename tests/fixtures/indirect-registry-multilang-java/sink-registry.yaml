@@ -1,0 +1,4 @@
+defaults: {maturity: enforcing, hops: 1}
+sinks:
+  - {id: py_sink, function: app.flow.sink, reason: multilang registry, owner: py-reviewer}
+  - {id: java_sink, function: Flow.sink, reason: multilang registry, owner: java-reviewer}

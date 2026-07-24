@@ -1,0 +1,31 @@
+bootstrap_sensitive_functions:
+  generated_by: bootstrap-sensitive-functions
+  source_repo: fixture
+  mode: draft_only
+  candidates:
+    - path: app/risky.py
+      function: run_command
+      type: function
+      start_line: 1
+      end_line: 4
+      anchor:
+        symbol: app/risky.py::run_command
+        signature_hash: d850daef4488f3eb
+      capabilities:
+        - subprocess_exec
+      status: rejected
+      fingerprint: 2f4dce8bf205f16fee0e0af297634638d5f579030f555f062756e462fcda3449
+      rejected_reason: covered by separate runtime control
+      rejected_by: security-reviewer
+      review_note: null
+      evidence:
+        - source: capability_signal
+          capability_id: subprocess_exec
+          kind: call
+          name: subprocess.run
+          line: 4
+        - source: capability_signal
+          capability_id: subprocess_exec
+          kind: import
+          name: subprocess
+          line: 2

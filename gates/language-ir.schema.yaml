@@ -1,0 +1,51 @@
+# Common language adapter IR contract (MVP-3 J0)
+#
+# J0 introduced the schema and routing seam. TASK-030 adds Java inventory;
+# Java gov/capability/callgraph and JS/TS adapters still remain stubbed.
+# Unsupported/stubbed files must be reflected in coverage instead of being
+# treated as deeply analyzed.
+
+inventory:
+  path: string
+  lang: string
+  functions:
+    - type: string
+      name: string
+      start_line: integer
+      end_line: integer
+      signature_start_line: integer
+      signature: string
+      annotations: []
+
+capability_signals:
+  path: string
+  lang: string
+  capabilities:
+    - id: string
+      level: protected_or_watched
+      signals:
+        - kind: import_or_call_or_builtin
+          name: string
+          line: integer
+  unresolved_dynamic: []
+  errors: []
+  parse_error: null_or_string
+  unreadable: null_or_string
+
+governance_annotations:
+  path: string
+  lang: string
+  annotations:
+    - symbol: string
+      level: frozen_or_protected_or_watched
+      reason: string
+      order_key: integer
+      errors: []
+
+callgraph:
+  path: string
+  lang: string
+  edges:
+    - caller: string
+      callee: string
+  unresolved_calls: []

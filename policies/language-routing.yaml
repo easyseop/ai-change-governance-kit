@@ -1,0 +1,115 @@
+# =====================================================================
+# language-routing.yaml · deep-analysis language adapter routing (MVP-3 J0/J2)
+# =====================================================================
+# Path/sensitive-zone gates are language independent. This policy only says
+# which changed files can receive deeper function/capability/callgraph analysis.
+# Unsupported extensions must be surfaced in coverage; they are not clean.
+#
+# J2 (D-076 · TASK-031 AC#9): per-language single `status` is replaced by
+# per-layer `layers:`. A language is never uniformly "supported" — Java at J2
+# has inventory + gov_level but no capability/callgraph analysis, and a card
+# that says "deep analysis available" for it is a false card.
+# =====================================================================
+
+policy_version: "0.2-mvp3-j2"
+
+defaults:
+  unsupported_adapter: unsupported
+
+  # --- layer contract (D-076) --------------------------------------
+  # Allowed layer states. ONLY the exact string `supported` may be reported as
+  # available. Everything else — `partial`, `stub`, `unsupported`, a missing
+  # layer key, a missing `layers:` block, or any value not in this enum — is
+  # NOT available (fail-safe: under-claim, never over-claim) and must leave a
+  # trace in the coverage `errors`/`not_checked` output rather than pass silently.
+  layer_states: [supported, partial, stub, unsupported]
+  unknown_layer_state: not_available
+
+  # Legacy `status:` is DEPRECATED and kept only so that pre-J2 consumers
+  # (kit copies that have not been synced yet) keep working. Its normative
+  # meaning is the conservative floor: `supported` only when ALL four layers
+  # are `supported`. Consumers migrated to `layers:` must ignore it.
+  # It must never be raised ahead of the layers — that is exactly the false
+  # card D-074 O-5 / D-075 forbids.
+  legacy_status: deprecated-floor
+
+# --- layer definitions (audit/doc; not matching input) ---------------
+# inventory    : function/method inventory extraction (names, signatures, line ranges)
+# gov_level    : function-level sensitivity — @gov/@Gov declarations + framework
+#                annotation catalogue -> frozen/protected/watched
+# capabilities : sensitive capability detection (new external call, exec, crypto, ...)
+# callgraph    : caller/callee graph for indirect-impact analysis
+layers_documented:
+  - inventory
+  - gov_level
+  - capabilities
+  - callgraph
+
+adapters:
+  python:
+    status: supported          # deprecated floor — all four layers supported
+    layers:
+      inventory: supported     # TASK-005
+      gov_level: supported     # TASK-008 / TASK-009
+      capabilities: supported  # TASK-016
+      callgraph: supported     # TASK-018
+    parser: python-ast
+    parser_package: python
+    grammar_package: stdlib-ast
+    extensions:
+      - .py
+  java:
+    status: stub               # deprecated floor — callgraph not fully supported (capabilities supported since J3/TASK-032)
+    layers:
+      inventory: supported     # TASK-030 (J1)
+      gov_level: supported     # TASK-031 (J2) — @Gov + framework-annotations.yaml
+      capabilities: supported  # TASK-032 (J3)
+      # L3 — TASK-036(추출기)+TASK-037(판정 배선) 통과·머지(D-091). `supported` 가 아니라
+      # `partial` 인 이유(A-0047 §7 · under-claim, never over-claim):
+      #   - 필드/static 이니셜라이저 컨텍스트의 호출은 콜그래프에 아예 안 실린다(A-0047 O-9)
+      #   - 메서드 레퍼런스 `::` dispatch 는 엣지도 coverage 기록도 없다(A-0047 O-6)
+      # 즉 "deep analysis available" 로 카드에 찍으면 false card 다(D-074 O-5·D-075).
+      # 어댑터 활성화는 확장자 기준이라 `partial` 이어도 Java 간접영향 판정은 정상 작동하고,
+      # 카드에는 `layers not available: callgraph` 로 한계가 계속 노출된다.
+      # `supported` 승격은 TASK-039 완료 후 재검토(D-076 계약 · 킷 반영은 TASK-038 AC#3).
+      callgraph: partial
+    parser: tree-sitter
+    parser_package: tree-sitter
+    grammar_package: tree-sitter-java
+    pinned_versions:
+      tree-sitter: 0.26.0
+      tree-sitter-java: 0.23.5
+    extensions:
+      - .java
+  javascript:
+    status: stub
+    layers:
+      inventory: stub
+      gov_level: stub
+      capabilities: stub
+      callgraph: stub
+    parser: tree-sitter
+    parser_package: tree-sitter
+    grammar_package: tree-sitter-javascript
+    pinned_versions:
+      tree-sitter: 0.26.0
+      tree-sitter-javascript: 0.25.0
+    extensions:
+      - .js
+      - .jsx
+  typescript:
+    status: stub
+    layers:
+      inventory: stub
+      gov_level: stub
+      capabilities: stub
+      callgraph: stub
+    parser: tree-sitter
+    parser_package: tree-sitter
+    grammar_package: tree-sitter-typescript
+    pinned_versions:
+      tree-sitter: 0.26.0
+      tree-sitter-typescript: 0.23.2
+    extensions:
+      - .ts
+      - .tsx

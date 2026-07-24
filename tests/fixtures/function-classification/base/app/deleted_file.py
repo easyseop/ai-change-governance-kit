@@ -1,0 +1,2 @@
+def gone():
+    return "gone"

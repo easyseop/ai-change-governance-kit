@@ -1,0 +1,20 @@
+policy_version: "0.1-mvp2"
+defaults:
+  maturity: shadow
+  hops: 1
+sinks:
+  - id: report_registry
+    function: app.reports.registry_sink
+    reason: Registry-only sink
+    owner: security-reviewer
+    maturity: enforcing
+    hops: 2
+  - id: invalid_maturity_registry
+    function: app.reports.registry_sink
+    reason: Invalid maturity is conservative
+    owner: security-reviewer
+    maturity: relaxed
+  - id: missing_function
+    function: app.reports.missing
+    reason: Must not be silently ignored
+    owner: security-reviewer

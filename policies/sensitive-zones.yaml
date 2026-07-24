@@ -1,0 +1,110 @@
+# =====================================================================
+# sensitive-zones.yaml  ·  민감 경로 지도 (MVP-0, 경로 기반)
+# =====================================================================
+# 🟡 조직이 자기 코드베이스에 맞게 채운다. 아래는 "왕관보석"만 거는 시작 초안.
+# 원칙: 전수 분류 금지. 여기 없는 모든 경로는 자유(🟢)로 간주한다.
+# level 의미: frozen(차단) / protected(승인요구) / watched(경고·기록)
+# tier: 1=결정적차단가능 (MVP-0은 전부 tier1, 경로기반이라 확신 가능)
+# =====================================================================
+
+policy_version: "0.1-mvp0"
+
+defaults:
+  # zones 에 안 걸리는 경로의 기본 등급
+  unlisted_level: free          # 🟢 자유
+  # frozen 닿으면 차단, protected/watched 는 승인요구/경고
+  block_levels:   [frozen]
+  approve_levels: [protected]
+  warn_levels:    [watched]
+
+zones:
+  # ---- 🔴 frozen : 절대 변경 금지 (금전 직접영향) ----
+  - path: "**/settlement/**"          # 정산
+    level: frozen
+    reason: 정산 핵심 로직 — 금전 직접영향
+    tier: 1
+  - path: "**/interest/**"            # 이자계산
+    level: frozen
+    reason: 이자 계산 — 금전 직접영향
+    tier: 1
+
+  # ---- 🟠 protected : 변경 시 사람 승인 필수 ----
+  - path: "**/auth/**"
+    level: protected
+    reason: 인증/인가 — 보안 경계
+    required_approval: security-reviewer
+    tier: 1
+  - path: "**/security/**"
+    level: protected
+    reason: 보안 정책·암호화
+    required_approval: security-reviewer
+    tier: 1
+  - path: "**/crypto/**"
+    level: protected
+    reason: 암호화/복호화
+    required_approval: security-reviewer
+    tier: 1
+  - path: "db/migrations/**"
+    level: protected
+    reason: DB 스키마/데이터 변경 (파괴적이면 frozen 승격 검토)
+    required_approval: dba-reviewer
+    tier: 1
+  - path: "infra/**"
+    level: protected
+    reason: 배포/인프라 변경
+    required_approval: platform-reviewer
+    tier: 1
+  - path: "**/*.k8s.yaml"
+    level: protected
+    reason: k8s manifest
+    required_approval: platform-reviewer
+    tier: 1
+
+  # ---- 🟡 watched : 변경 시 경고·기록 (차단 아님) ----
+  - path: "**/common/**"
+    level: watched
+    reason: 공통/공유 모듈 — 영향범위 큼 (분류 대신 도달범위 표시 대상)
+    tier: 1
+  - path: "**/utils/**"
+    level: watched
+    reason: 공유 유틸 — 영향범위 큼
+    tier: 1
+  - path: "**/config/**"
+    level: watched
+    reason: 설정 변경 — config-secret 하네스와 연계
+    tier: 1
+
+  # ---- 🟠 protected : 하네스 자기보호 (TASK-018 AC#6 · GPT 위험④) ----
+  # 통제 장치의 집행 경로. 이 경로 편집 = 사람 승인 필수(차단 아님 — 하네스는 계속 진화).
+  # 새 차단 메커니즘 발명 금지(AC#6) — 1층(sensitive-zones)/기존 check-sensitive-zones 로 집행.
+  # 근거·운영부담·범위조정 여지: collab/answers/A-0006.md §Q-0002.
+  - path: "policies/**"
+    level: protected
+    reason: 정책 정의(민감경로·능력·라우팅) — 완화·삭제 시 통제 무력화
+    required_approval: security-reviewer
+    tier: 1
+  - path: ".harness/**"
+    level: protected
+    reason: 게이트 집행 코드 — 로직 무력화(항상-pass 편집)는 게이트 자신이 못 잡음, 이 등록만 포착
+    required_approval: security-reviewer
+    tier: 1
+  - path: "tests/run-tests.sh"
+    level: protected
+    reason: 게이트 러너 — 호출 제거·우회 삽입 경로
+    required_approval: security-reviewer
+    tier: 1
+  - path: "tests/cases.yaml"
+    level: protected
+    reason: 회귀 검증 케이스 — 삭제·약화 시 게이트 실가드성 상실
+    required_approval: security-reviewer
+    tier: 1
+  - path: ".github/workflows/**"
+    level: protected
+    reason: CI 집행 경로 — continue-on-error·required check 무력화 경로
+    required_approval: platform-reviewer
+    tier: 1
+  - path: "CODEOWNERS"
+    level: protected
+    reason: 리뷰 라우팅 소유권 — 자기보호 우회 방지
+    required_approval: security-reviewer
+    tier: 1

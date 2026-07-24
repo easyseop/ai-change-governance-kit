@@ -1,0 +1,3 @@
+defaults: {maturity: enforcing, hops: 1}
+sinks:
+  - {id: method_reference_hop_sink, function: Flow.sink, reason: method reference dispatch must fail closed across hop boundary, owner: security-reviewer}

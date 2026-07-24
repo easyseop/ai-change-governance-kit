@@ -1,0 +1,3 @@
+defaults: {maturity: enforcing, hops: 4}
+sinks:
+  - {id: opaque_getter_dispatch_sink, function: Flow.sink, reason: opaque getter dispatch must fail closed, owner: security-reviewer}

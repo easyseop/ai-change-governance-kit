@@ -1,0 +1,12 @@
+defaults:
+  layer_states: [supported, partial, stub, unsupported]
+layers_documented: [inventory, gov_level, capabilities, callgraph]
+adapters:
+  java:
+    status: stub
+    extensions: [.java]
+    layers:
+      inventory: supported
+      gov_level: supported
+      capabilities: supported
+      callgraph: supported

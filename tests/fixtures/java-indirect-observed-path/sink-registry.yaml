@@ -1,0 +1,3 @@
+defaults: {maturity: enforcing, hops: 4}
+sinks:
+  - {id: observed_path_sink, function: Flow.sink, reason: observed dispatch path must not be marked inferred, owner: security-reviewer}

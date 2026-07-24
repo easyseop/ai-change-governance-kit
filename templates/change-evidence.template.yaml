@@ -1,0 +1,70 @@
+# =====================================================================
+# change-evidence.yaml  ·  변경 감사 카드 (게이트가 자동 생성하는 출력 스키마)
+# =====================================================================
+# 사람 리뷰어는 전체 diff 를 읽기 전에 이 카드부터 보고 위험 변경을 파악한다.
+# generate-change-evidence 게이트가 이 형식으로 출력한다 (Codex 구현).
+# =====================================================================
+
+change_evidence:
+  requirement_id: REQ-2026-001        # change-intent 에서 가져옴
+  author: claude-code
+  generated_on: "YYYY-MM-DD"
+  base_commit: "<git hash>"           # 비교 기준 (멱등성용)
+  tool_version: "0.2-task019"
+  python_version: "3.x.y"
+  policy_sha:
+    approval-routing.yaml: "<sha256>"
+    sensitive-zones.yaml: "<sha256>"
+
+  summary:
+    files_changed: 0
+    lines_added: 0
+    lines_removed: 0
+
+  changed_files:
+    - path: backend/app/api/admin/search.py
+      zone_level: free                # free / watched / protected / frozen
+      in_allowed_paths: true          # change-intent 범위 안인가. 미선언 시 true 금지(현재 카드는 changed_files=[]).
+  changed_functions: []
+
+  # ── 1층 결정적 판정 결과 ──
+  intent_check:
+    status: pass                      # pass / fail / not_declared (미선언은 approval_required)
+    out_of_scope_paths: []            # allowed 밖을 건드린 경로
+    forbidden_touched: []             # forbidden_paths 를 건드린 경로
+    expected_paths: []                # 반드시 변경돼야 할 경로 선언(각 항목별 1개 이상 매칭)
+    missing_expected: []              # 변경 파일에 매칭되지 않은 expected_paths
+    expected_paths_semantics: each pattern is satisfied by at least one changed file; literal paths are recommended because globs are coarse; renames use the destination path and deletes count as a path change
+  sensitive_zone_check:
+    status: pass                      # pass / blocked / approval_required / not_checked
+    frozen_touched: []                # 🔴 차단 사유
+    protected_touched: []             # 🟠 승인요구
+    watched_touched: []               # 🟡 경고
+
+  # ── 영향범위 (MVP-2, 지금은 빈칸 가능) ──
+  blast_radius:
+    shared_modules_changed: []
+    importers_count: null
+
+  # ── 최종 판정 ──
+  verdict: pass                       # pass / blocked / approval_required
+  coverage_statement:
+    verdict_statement: no governance violation detected
+    checked:
+      - gate: check-change-intent
+        checked: changed paths against declared allowed_paths, forbidden_paths, and optional expected_paths (one changed-file match per pattern; literal paths recommended because globs are coarse; renames use destination paths and deletes count as path changes)
+      - gate: check-sensitive-zones
+        checked: changed paths against sensitive-zones policy
+      - gate: check-function-gov-level
+        checked: changed Python functions against @gov annotations
+    not_checked:
+      # change-intent 미선언 시 아래 항목에 intent_not_declared 토큰과 의도이탈 미검사 사실을 추가한다.
+      - runtime execution paths
+      - unregistered sensitive business logic
+      - cross-commit cumulative risk
+      - non-Python semantic analysis
+      - complete dynamic obfuscation recovery
+  reasons: []
+
+  # ── 승인 라우팅 ──
+  reviewer_required: []               # approval-routing 결과. 예: [security-reviewer]

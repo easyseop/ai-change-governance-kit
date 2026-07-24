@@ -1,0 +1,6 @@
+change_intent:
+  requirement_id: REQ-MATURITY-001
+  author: codex
+  allowed_paths:
+    - "app/**"
+  forbidden_paths: []

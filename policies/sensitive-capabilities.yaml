@@ -1,0 +1,161 @@
+# =====================================================================
+# sensitive-capabilities.yaml  ·  민감 능력 카탈로그 (MVP-1, 2층)
+# =====================================================================
+# 🟡 조직이 자기 스택에 맞게 채운다. 아래는 "고신호·저잡음" 능력만 거는 시작 초안.
+# 원칙(설계 §1·§3, D-004):
+#   - 능력은 "무엇을 하느냐" — 경로보다 강한 진짜 민감 기준.
+#   - 2층(추론)은 **자동 차단 금지 → 승인요구(approval_required)가 상한**.
+#     catalog level 은 protected|watched 만. frozen 은 검증오류 → protected 로 clamp.
+#   - **신규 도입만** 승인요구(TASK-011): base 에 이미 있던 능력은 재경고하지 않는다.
+#   - 감지는 **결정적 AST 신호만**(import 바인딩 + 해석된 호출). 값 추정·LLM 금지.
+# 신호 종류:
+#   imports  : 이 모듈을 import 하는 것 자체가 신호 (subprocess 등 — 새로 들이면 곧 도입).
+#              os·io 처럼 흔한 모듈은 여기 넣지 않는다(잡음). 대신 그 특정 호출만 calls 로.
+#   calls    : 해석된 점표기 전체 이름(별칭·from-import 해소 후)이 일치하면 신호.
+#   builtins : import 없는 내장 이름(eval/exec 등) 이 호출되면 신호.
+# 출처 메타데이터(TASK-016 AC#8 — "이 목록 왜 믿나"를 파일 자체로 답한다):
+#   source   : 이 항목의 근거 출처. `builtin: cwe|owasp|bandit`(공인 위험 카탈로그) 또는
+#              `org: <팀>`(우리 조직 자체 판단). 게이트는 이 필드를 읽지 않는다(문서용·감사용).
+#   owner    : 이 항목을 유지·소유하는 책임 주체(변경 시 이 주체가 판단). reviewer 와 같을 수 있다.
+# =====================================================================
+
+policy_version: "0.1-mvp1"
+
+defaults:
+  # 2층 판정 상한 — 능력 감지는 절대 blocked 로 승격 금지 (D-004, 설계 §3)
+  max_verdict:    approval_required
+  allowed_levels: [protected, watched]   # frozen 금지 (오면 검증오류+protected clamp)
+  approve_levels: [protected]
+  warn_levels:    [watched]
+  # base 에 있던 능력은 재경고 안 함 — head 에 **신규 도입된 capability id** 만 (TASK-011)
+  new_only: true
+
+capabilities:
+  # ---- 🟠 서브프로세스·셸 실행 (권한확대·RCE) ----
+  - id: subprocess_exec
+    title: 서브프로세스·셸 실행
+    level: protected
+    reason: 임의 명령/셸 실행 — 권한확대·RCE 경계
+    reviewer: security-reviewer
+    source:                    # 이 항목을 "왜 믿나" — 공인 위험 출처 (TASK-016 AC#8)
+      builtin: bandit          # B602/B605 shell=True·B607 부분경로 · CWE-78 OS Command Injection
+    owner: security-reviewer   # 이 항목을 유지·소유하는 책임 주체
+    signals:
+      imports: [subprocess, pty]         # os 는 import 무신호 — 아래 특정 호출만
+      calls:
+        - subprocess.run
+        - subprocess.Popen
+        - subprocess.call
+        - subprocess.check_call
+        - subprocess.check_output
+        - subprocess.getoutput
+        - subprocess.getstatusoutput
+        - os.system
+        - os.popen
+        - os.execl
+        - os.execlp
+        - os.execle
+        - os.execv
+        - os.execve
+        - os.execvp
+        - os.execvpe
+        - os.spawnl
+        - os.spawnv
+        - os.posix_spawn
+        - pty.spawn
+
+  # ---- 🟠 동적 코드 실행 (eval/exec — 임의 코드) ----
+  - id: dynamic_code_exec
+    title: 동적 코드 실행
+    level: protected
+    reason: 문자열→코드 실행 — 임의 코드 주입 경계
+    reviewer: security-reviewer
+    source:
+      builtin: bandit          # B307 eval·B102 exec_used·B323 · CWE-95 Code Injection
+    owner: security-reviewer
+    signals:
+      builtins: [eval, exec, compile, __import__]
+      calls:
+        - importlib.import_module
+        - importlib.__import__
+
+  # ---- 🟠 신뢰불가 역직렬화 (RCE 벡터) ----
+  - id: unsafe_deserialization
+    title: 신뢰불가 역직렬화
+    level: protected
+    reason: pickle/yaml 등 역직렬화 — 원격 코드 실행 벡터
+    reviewer: security-reviewer
+    source:
+      builtin: bandit          # B301 pickle·B506 yaml_load · CWE-502 Deserialization of Untrusted Data
+    owner: security-reviewer
+    signals:
+      imports: [pickle, cPickle, marshal, shelve, dill]
+      calls:
+        - pickle.load
+        - pickle.loads
+        - marshal.load
+        - marshal.loads
+        - shelve.open
+        - dill.load
+        - dill.loads
+        - yaml.load          # SafeLoader 여부는 값 추정 필요 → 보수적으로 항상 신호
+        - yaml.unsafe_load
+        - yaml.full_load
+
+  # ---- 🟠 외부 네트워크 호출 (데이터 유출·SSRF) ----
+  - id: outbound_network
+    title: 외부 네트워크 호출
+    level: protected
+    reason: 신규 외부 송수신 — 데이터 유출·SSRF 경계
+    reviewer: security-reviewer
+    source:
+      builtin: owasp           # A10:2021 SSRF · 데이터 유출 경계 (CWE-918)
+    owner: security-reviewer
+    signals:
+      imports:
+        - requests
+        - httpx
+        - aiohttp
+        - urllib3
+        - socket
+        - ftplib
+        - smtplib
+        - poplib
+        - imaplib
+        - telnetlib
+        - paramiko
+        - websocket
+        - websockets
+      calls:
+        - urllib.request.urlopen
+        - urllib.request.Request
+        - http.client.HTTPConnection
+        - http.client.HTTPSConnection
+        - socket.create_connection
+
+  # ---- 🟠 암복호화·서명 (보안 경계) ----
+  - id: crypto_primitive
+    title: 암복호화·서명 기본연산
+    level: protected
+    reason: 암호화/복호화/서명 도입 — 보안 경계, 사람 검토
+    reviewer: security-reviewer
+    source:
+      builtin: cwe             # CWE-327 취약 암호·CWE-295 인증서 검증 우회(ssl._create_unverified_context)
+    owner: security-reviewer
+    signals:
+      imports:
+        - cryptography
+        - Crypto          # pycryptodome
+        - Cryptodome
+        - nacl
+        - ssl
+        - hmac
+      calls:
+        - ssl.wrap_socket
+        - ssl._create_unverified_context   # 인증서 검증 우회 — 특히 위험
+        - hmac.new
+
+  # ---- (이연) 자격증명·PII 데이터 취급 ----
+  # env/secret 읽기·PII 필드 접근은 값·데이터흐름 분석이 필요(단순 AST 신호로는 잡음 과다).
+  # 이 catalog(TASK-010 MVP)에서는 **명시 이연** — data-privacy/config-secret 카탈로그와
+  # 연계하는 별도 태스크로. 임의로 넣지 않는다(잡음 폭증 = 게이트 무시로 이어짐, 설계 §3).

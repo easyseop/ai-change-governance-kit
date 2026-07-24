@@ -1,0 +1,8 @@
+defaults:
+  maturity: enforcing
+  hops: 2
+sinks:
+  - id: java_registry
+    function: Reports.registryTarget
+    reason: explicit Java sink
+    owner: platform-reviewer

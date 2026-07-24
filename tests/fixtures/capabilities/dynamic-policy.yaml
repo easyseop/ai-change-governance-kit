@@ -1,0 +1,30 @@
+policy_version: "test-dynamic"
+
+defaults:
+  max_verdict: approval_required
+  allowed_levels: [protected, watched]
+  approve_levels: [protected]
+  warn_levels: [watched]
+  new_only: true
+
+capabilities:
+  - id: subprocess_exec
+    title: Subprocess execution
+    level: protected
+    reason: "command execution boundary"
+    reviewer: security-reviewer
+    source: "builtin: cwe"
+    owner: security
+    signals:
+      imports: [subprocess]
+      calls: [os.system]
+
+  - id: dynamic_code_exec
+    title: Dynamic code execution
+    level: protected
+    reason: "dynamic import or code execution boundary"
+    reviewer: security-reviewer
+    source: "builtin: cwe"
+    owner: security
+    signals:
+      builtins: [__import__]

@@ -1,0 +1,10 @@
+policy_version: test
+defaults:
+  block_levels: [frozen]
+  approve_levels: [protected]
+  warn_levels: [watched]
+  unlisted_level: free
+zones:
+  - path: "services/settlement/**"
+    level: frozen
+    reason: fixture settlement crown jewel

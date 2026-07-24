@@ -1,0 +1,11 @@
+defaults:
+  block_levels: [frozen]
+zones:
+  - path: app/FrozenLedger.java
+    level: frozen
+    reason: settlement boundary
+    required_approval: settlement-reviewer
+  - path: app/protected/**
+    level: protected
+    reason: review boundary
+    required_approval: security-reviewer

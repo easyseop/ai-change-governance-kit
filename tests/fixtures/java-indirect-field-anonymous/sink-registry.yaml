@@ -1,0 +1,3 @@
+defaults: {maturity: enforcing, hops: 4}
+sinks:
+  - {id: field_anonymous_sink, function: Flow.sink, reason: field initializer anonymous dispatch, owner: security-reviewer}

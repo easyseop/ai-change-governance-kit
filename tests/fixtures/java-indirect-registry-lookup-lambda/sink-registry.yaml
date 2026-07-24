@@ -1,0 +1,3 @@
+defaults: {maturity: enforcing, hops: 4}
+sinks:
+  - {id: registry_lookup_lambda_sink, function: Flow.sink, reason: registry lookup dispatch must fail closed, owner: security-reviewer}

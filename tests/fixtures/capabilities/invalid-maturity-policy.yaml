@@ -1,0 +1,18 @@
+policy_version: "test-invalid-maturity"
+
+defaults:
+  max_verdict: approval_required
+  allowed_levels: [protected, watched]
+  approve_levels: [protected]
+  warn_levels: [watched]
+  new_only: true
+
+capabilities:
+  - id: outbound_network
+    title: External network
+    level: protected
+    maturity: pilot
+    reason: invalid maturity falls back to enforcing
+    reviewer: security-reviewer
+    signals:
+      imports: [requests]

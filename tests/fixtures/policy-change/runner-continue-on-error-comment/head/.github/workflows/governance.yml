@@ -1,0 +1,12 @@
+name: governance
+
+on:
+  pull_request:
+
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    steps:
+      - name: change intent
+        continue-on-error: true # keep going
+        run: python3 .harness/gates/check-change-intent.py "$@"

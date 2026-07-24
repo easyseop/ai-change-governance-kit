@@ -1,0 +1,7 @@
+policy_version: legacy
+adapters:
+  java:
+    status: supported
+    parser: tree-sitter
+    extensions:
+      - .java

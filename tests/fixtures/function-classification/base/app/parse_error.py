@@ -1,0 +1,2 @@
+def valid():
+    return "valid"

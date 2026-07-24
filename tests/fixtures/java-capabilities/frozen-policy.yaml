@@ -1,0 +1,16 @@
+defaults:
+  max_verdict: blocked
+  allowed_levels: [frozen]
+  approve_levels: [frozen]
+  warn_levels: []
+  new_only: true
+capabilities:
+  - id: command_exec
+    level: frozen
+    reason: rigged frozen capability must clamp to protected
+    reviewer: security-reviewer
+    signals:
+      calls:
+        - Runtime.exec
+        - Runtime.getRuntime
+      methods: [exec]

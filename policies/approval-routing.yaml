@@ -1,0 +1,42 @@
+# =====================================================================
+# approval-routing.yaml  ·  승인자 자동 추천 규칙
+# =====================================================================
+# 변경이 닿은 영역/능력에 따라 필요한 리뷰어를 추천한다.
+# generate-change-evidence 게이트가 이 표를 보고 reviewer_required 를 채운다.
+# 🟡 실제 담당자(이름/그룹)는 조직이 채운다.
+# =====================================================================
+
+policy_version: "0.1-mvp0"
+
+# 매칭 키: sensitive-zones 의 reason/level 또는 경로 패턴
+routing:
+  - match_path: "**/auth/**"
+    reviewer: security-reviewer
+    why: 인증/인가 변경
+  - match_path: "**/security/**"
+    reviewer: security-reviewer
+    why: 보안 정책 변경
+  - match_path: "**/crypto/**"
+    reviewer: security-reviewer
+    why: 암복호화 변경
+  - match_path: "db/migrations/**"
+    reviewer: dba-reviewer
+    why: DB 스키마 변경
+  - match_path: "infra/**"
+    reviewer: platform-reviewer
+    why: 인프라/배포 변경
+  - match_path: "**/*.k8s.yaml"
+    reviewer: platform-reviewer
+    why: k8s manifest 변경
+  - match_path: "**/settlement/**"
+    reviewer: settlement-owner
+    why: 정산 로직 (frozen — 원칙상 차단, 예외 시 승인)
+  - match_path: "**/api/**"
+    reviewer: api-owner
+    why: API 계약 변경 가능
+  - match_path: "**/common/**"
+    reviewer: module-owner
+    why: 공유 모듈 — 영향범위 확인 필요
+
+# 매칭 안 되면 기본 리뷰어
+default_reviewer: dev-reviewer

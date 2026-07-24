@@ -1,0 +1,2 @@
+def created():
+    return "created"

@@ -1,0 +1,28 @@
+# =====================================================================
+# change-intent.yaml 예시 · 관리자 검색조건 추가
+# =====================================================================
+change_intent:
+  requirement_id: REQ-2026-001
+  purpose: 관리자 화면에 검색 조건 추가
+  author: claude-code
+
+  allowed_paths:
+    - frontend/src/features/admin/**
+    - backend/app/api/admin/**
+    - backend/tests/api/**
+
+  forbidden_paths:
+    - backend/app/auth/**
+    - backend/app/security/**
+    - infra/**
+    - db/migrations/**
+
+  # 벤더-브랜치 패치 생존성 확인: 리터럴 권장(glob은 하위 아무 파일 1건으로 충족되는 거친 보증).
+  # rename은 목적지 경로만, delete는 경로 변경 사실만 판정한다.
+  expected_paths:
+    - backend/app/api/admin/search.py
+
+  expected_change_types:
+    - api_field_addition
+    - ui_filter_addition
+    - test_update

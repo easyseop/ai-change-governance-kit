@@ -1,0 +1,3 @@
+defaults: {maturity: enforcing, hops: 1}
+sinks:
+  - {id: parity_sink, function: Flow.sink, reason: parity, owner: parity-reviewer}

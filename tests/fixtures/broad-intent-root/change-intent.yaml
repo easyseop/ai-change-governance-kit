@@ -1,0 +1,6 @@
+change_intent:
+  requirement_id: REQ-BROAD-ROOT
+  author: codex
+  allowed_paths:
+    - "**"
+  forbidden_paths: []

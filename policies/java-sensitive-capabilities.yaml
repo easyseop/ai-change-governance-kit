@@ -1,0 +1,286 @@
+# =====================================================================
+# java-sensitive-capabilities.yaml · Java 민감 능력 카탈로그 (MVP-3 J3)
+# =====================================================================
+# 소유: Claude(정책 소유자). Codex 는 이 파일을 수정하지 않는다 — AGENTS.md·CLAUDE.md §1.
+# 근거: TASK-032 AC#1·AC#2 · Q-0007 · collab/answers/A-0036.md · decisions D-079.
+#
+# 무엇인가:
+#   Java 소스에서 **위험 능력의 신규 도입**을 감지하기 위한 결정적 신호표.
+#   Python 의 `sensitive-capabilities.yaml` 과 **같은 판정 계약**(2층·승인상한·신규만)을
+#   따르되, **신호 스키마는 언어 특성상 다르다**(아래 §신호 종류).
+#
+# 🔴 왜 별도 파일인가 (Q-0007 Q1 — 실측 근거, D-079)
+#   Python 추출기 `extract-python-capabilities.py` 는 `capabilities:` 목록을
+#   **언어 필터 없이 전부** 읽고, `{imports, calls, builtins}` 밖의 신호 키를 만나면
+#   `unknown_signal_kind` **검증오류**를 낸다. 그리고 `check-new-capabilities.py` 는
+#   `if new_capabilities or fail_closed or errors:` 로 **errors 하나만 있어도
+#   approval_required(exit 2)** 를 낸다.
+#   ⇒ Java 항목을 공유 파일에 넣으면 **Java 와 무관한 순수 Python PR 까지 전부 승인요구**가 된다.
+#   실측(A-0036 §검증): 무해한 2줄 Python PR → 현행 정책 `pass`/exit 0 ↔
+#   Java 항목 주입 정책 `approval_required`/exit 2. 이는 D-074·D-076 이 피해온
+#   "의존성/정책 사정으로 전 PR 승인요구" 실패모드 그 자체다.
+#   ⇒ 언어별 분리가 **취향이 아니라 회귀 방지 요건**. 부수효과로 Python 추출기는
+#     **무개조**(shipped·통과한 층에 손대지 않음 = 회귀 위험 0).
+#   선례: J2 의 `framework-annotations.yaml` 도 같은 이유로 분리 파일이다.
+#
+# 🔴 불변식 (어기면 검증오류 — 게이트는 fail-closed)
+#   1. level 은 **protected | watched 만**. `frozen` 금지.
+#      능력 감지는 **2층(추론)** 이고 2·3층은 자동 차단 금지(CLAUDE.md §4 · D-004).
+#      정책에 frozen 이 오면 → **검증오류 기록 + protected 로 clamp**(조용히 무시 금지).
+#      ⚠️ 이 하한은 **게이트 코드의 하드 플로어**여야 한다 — 아래 `allowed_levels` 를
+#      읽어서만 판단하면 **정책 파일을 고쳐 불변식을 끌 수 있다**(D-077 O-2).
+#      정책값은 *더 좁힐* 수만 있고 frozen 을 *열 수는* 없다. (TASK-032 AC#7)
+#   2. **신규 도입만** 승인요구 — base 에 이미 있던 능력은 재경고하지 않는다(TASK-011 계보).
+#      삭제는 항상 안전(무신호). 양쪽 존재 = 미감지.
+#   3. 감지는 **결정적 구문 신호만**. 값 추정·타입추론·LLM 금지.
+#      해소 불가한 동적 호출은 **추정하지 말고 `unresolved_dynamic` 으로 정직 노출**.
+#   4. 불완전성은 **항상 과탐(approval) 쪽으로 반올림 — 과소탐(놓침) 금지**(MVP-3 공통).
+#   5. **중복 id 금지** — 같은 id 가 두 번 나오면 검증오류(마지막 항목 조용히 승리 금지).
+#
+# ---------------------------------------------------------------------
+# 신호 종류 (Q-0007 Q3 — Java 는 Python 과 대칭이 아니다)
+# ---------------------------------------------------------------------
+#   imports : import 선언의 FQN. **자기 자신 또는 하위 접두**가 일치하면 신호.
+#             `java.io.ObjectInputStream` → `import java.io.ObjectInputStream;` 일치.
+#             `javax.crypto` → `import javax.crypto.Cipher;` · `import javax.crypto.*;` 일치.
+#             ⚠️ **import backstop 은 Java 에서 부분적으로만 유효**하다 —
+#             `java.lang.*` 은 **암시적 import**라 `Runtime`·`ProcessBuilder`·`Class` 는
+#             import 문이 아예 없다. 그래서 아래 types/calls 가 필수다(TASK-032 AC#2 비대칭).
+#
+#   types   : **타입의 simple name**. 다음 위치에서 관찰되면 신호 —
+#             (a) 객체 생성 `new X(...)`, (b) 정적 호출 수신자 `X.m(...)`,
+#             (c) 변수/필드 선언 타입 `X v = ...`.
+#             매칭은 framework-annotations 불변식 2 와 동일하게 **마지막 점-세그먼트 기준**:
+#             `new java.lang.ProcessBuilder()` 도 `ProcessBuilder` 로 잡힌다
+#             (FQN 인라인 표기를 놓치면 과소탐 = parity 위반).
+#
+#   calls   : **정규화 호출이름** `Type.method`. 정규화 규칙 —
+#             메서드 호출 체인의 **구문상 뿌리(root)** 가 타입이름이거나 `new X(...)` 이면
+#             그 simple name 을 Type 으로, 호출된 메서드명을 method 로 삼는다.
+#               `Runtime.getRuntime().exec(cmd)`     → `Runtime.getRuntime` · `Runtime.exec`
+#               `new ProcessBuilder(cmd).start()`     → `ProcessBuilder.start`
+#               `Class.forName(n).getMethod(m)`       → `Class.forName` · `Class.getMethod`
+#             뿌리가 **변수**면(`ois.readObject()`) 타입을 알 수 없다 → 이 신호로는 안 잡힌다.
+#             그 구멍은 imports/types 백스톱과 `methods` 가 메운다(계층 방어).
+#
+#   methods : **수신자 무관 메서드명**. 수신자가 변수라 타입 해소가 불가능한 경우의 최후 백스톱.
+#             ⚠️ 과탐·잡음 위험이 가장 큰 신호다("잡음 폭증 = 게이트 무시"는 실패다).
+#             ⇒ **그 이름 자체가 고신호인 것만** 여기에 넣는다. 애매하면 `watched` 로 낮춘다.
+#
+# 출처 메타데이터 (TASK-016 AC#8 계보 — "이 목록 왜 믿나"를 파일 자체로 답한다)
+#   source  : `builtin: cwe|owasp` (공인 위험 카탈로그) · `framework: <artifact>` · `org: <팀>`.
+#             게이트는 이 필드를 읽지 않는다(문서용·감사용).
+#   owner   : 이 항목을 유지·소유하는 책임 주체. 등급 변경은 이 주체의 판단.
+#   reviewer: 승인 라우팅 힌트(approval-routing.yaml 의 reviewer 어휘와 동일).
+#   reason  : 카드에 그대로 실릴 한 줄. 사람이 30초 안에 위험을 파악할 문장으로.
+# =====================================================================
+
+policy_version: "0.1-mvp3-j3"
+language: java              # 이 카탈로그가 적용되는 언어(라우팅 대조용). Python 카탈로그와 교차 소비 금지.
+
+defaults:
+  # 2층 판정 상한 — 능력 감지는 절대 blocked 로 승격 금지 (D-004, 불변식 1)
+  max_verdict:    approval_required
+  allowed_levels: [protected, watched]   # frozen 금지 (오면 검증오류 + protected clamp)
+  approve_levels: [protected]
+  warn_levels:    [watched]
+  # base 에 있던 능력은 재경고 안 함 — head 에 신규 도입된 capability id 만 (불변식 2)
+  new_only: true
+  # 해소 불가 동적 호출(리플렉션 등)의 태도: 추정 금지, coverage 로 정직 노출 (불변식 3)
+  unresolved_dynamic: expose
+
+capabilities:
+  # ---- 🟠 명령 실행 (권한확대·RCE) ----
+  # Python 대응: subprocess_exec (protected) — parity 유지
+  - id: command_exec
+    title: 외부 명령·프로세스 실행
+    level: protected
+    reason: 임의 OS 명령 실행 — 권한확대·RCE 경계
+    reviewer: security-reviewer
+    source:
+      builtin: cwe             # CWE-78 OS Command Injection
+    owner: security-reviewer
+    signals:
+      # java.lang 은 암시적 import 라 imports 신호가 없다 → types/calls 로만 잡힌다
+      types: [ProcessBuilder]
+      calls:
+        - Runtime.getRuntime
+        - Runtime.exec
+        - ProcessBuilder.start
+      methods: [exec]          # 수신자가 변수인 경우 백스톱 (`rt.exec(...)`)
+
+  # ---- 🟠 신뢰불가 역직렬화 (Java RCE 의 대표 벡터) ----
+  # Python 대응: unsafe_deserialization (protected) — parity 유지
+  - id: unsafe_deserialization
+    title: 신뢰불가 역직렬화
+    level: protected
+    reason: 역직렬화 도입 — 가젯체인 원격 코드 실행 벡터
+    reviewer: security-reviewer
+    source:
+      builtin: cwe             # CWE-502 Deserialization of Untrusted Data
+    owner: security-reviewer
+    signals:
+      imports:                 # 명시 import 라 backstop 유효
+        - java.io.ObjectInputStream
+        - java.beans.XMLDecoder
+        - com.thoughtworks.xstream
+      types: [ObjectInputStream, XMLDecoder, XStream]
+      calls:
+        - ObjectInputStream.readObject
+        - XMLDecoder.readObject
+        - XStream.fromXML
+      methods: [readObject]    # `ois.readObject()` — 수신자 변수 백스톱. 이름 자체가 고신호.
+
+  # ---- 🟠 리플렉션·동적 로드 (Python getattr 난독의 Java 대응) ----
+  # Python 대응: dynamic_code_exec (protected). TASK-032 AC#3 이 명시한 우회 벡터 —
+  # 여기서 등급을 낮추면 Python 대비 과소탐 = parity 위반이 된다.
+  # (프레임워크 정상 사용도 잡히지만 new_only:true 라 **신규 도입** 시점 1회만 뜬다.)
+  - id: reflection
+    title: 리플렉션·동적 클래스 로드
+    level: protected
+    reason: 문자열로 클래스·메서드 지목 — 정적 분석 우회·임의 호출 경계
+    reviewer: security-reviewer
+    source:
+      builtin: cwe             # CWE-470 Unsafe Reflection
+    owner: security-reviewer
+    signals:
+      imports:
+        - java.lang.reflect
+        - java.lang.invoke
+      types: [Method, Constructor, MethodHandles, ClassLoader, URLClassLoader]
+      calls:
+        - Class.forName
+        - Method.invoke
+        - Constructor.newInstance
+        - ClassLoader.loadClass
+        - MethodHandles.lookup
+      # `invoke` 는 단독으로는 잡음이 크다(프레임워크 관용구) → methods 백스톱에 넣지 않는다.
+      # 대신 해소 불가분은 unresolved_dynamic 으로 노출한다(불변식 3).
+
+  # ---- 🟠 문자열 조립 SQL (주입 표면) ----
+  # Python 카탈로그에는 대응 항목이 없다(신규). 근거는 OWASP A03 + TASK-032 AC#1 명시.
+  - id: sql_injection_surface
+    title: 문자열 SQL 실행 표면
+    level: protected
+    reason: 조립된 문자열 SQL 실행 — 주입 표면, 파라미터 바인딩 여부 사람 확인 필요
+    reviewer: security-reviewer
+    source:
+      builtin: owasp           # A03:2021 Injection · CWE-89 SQL Injection
+    owner: security-reviewer
+    signals:
+      imports:
+        - java.sql.Statement
+      types: [Statement]       # PreparedStatement 는 simple name 이 달라 여기 안 걸린다(의도)
+      calls:
+        - Statement.execute
+        - Statement.executeQuery
+        - Statement.executeUpdate
+        - Statement.addBatch
+        - Connection.createStatement   # 조립 SQL 의 관문 — PreparedStatement 와 갈리는 지점
+      # ⚠️ "문자열이 상수인가 조립인가"는 값 추정이다 → 판정에 쓰지 않는다(불변식 3).
+      #    미해소는 과탐 쪽으로 반올림한다(불변식 4).
+
+  # ---- 🟠 JNDI 조회 (Log4Shell 계열) ----
+  - id: jndi_lookup
+    title: JNDI 원격 조회
+    level: protected
+    reason: JNDI 이름 조회 — 원격 객체 로드·RCE(Log4Shell 계열) 경계
+    reviewer: security-reviewer
+    source:
+      builtin: cwe             # CWE-74 Injection · JNDI remote class loading
+    owner: security-reviewer
+    signals:
+      imports:
+        - javax.naming
+      types: [InitialContext, Context]
+      calls:
+        - InitialContext.lookup
+        - Context.lookup
+      methods: [lookup]        # 수신자 변수 백스톱. JNDI 문맥에서 이름 자체가 고신호.
+
+  # ---- 🟠 외부 HTTP 호출 (데이터 유출·SSRF) ----
+  # Python 대응: outbound_network (protected) — parity 유지
+  - id: outbound_http
+    title: 외부 HTTP 호출
+    level: protected
+    reason: 신규 외부 송수신 — 데이터 유출·SSRF 경계
+    reviewer: security-reviewer
+    source:
+      builtin: owasp           # A10:2021 SSRF · CWE-918
+    owner: security-reviewer
+    signals:
+      imports:
+        - org.springframework.web.client.RestTemplate
+        - org.springframework.web.reactive.function.client.WebClient
+        - java.net.http
+        - java.net.URLConnection
+        - java.net.HttpURLConnection
+        - okhttp3
+        - org.apache.http
+      types: [RestTemplate, WebClient, HttpClient, HttpURLConnection, OkHttpClient]
+      calls:
+        - RestTemplate.exchange
+        - RestTemplate.getForObject
+        - RestTemplate.getForEntity
+        - RestTemplate.postForObject
+        - RestTemplate.postForEntity
+        - WebClient.create
+        - HttpClient.newHttpClient
+        - HttpClient.send
+        - HttpClient.sendAsync
+        - URL.openConnection
+        - URL.openStream
+
+  # ---- 🟠 암복호화·키 (보안 경계) ----
+  # Python 대응: crypto_primitive (protected) — parity 유지
+  - id: crypto
+    title: 암복호화·키 취급
+    level: protected
+    reason: 암호화/복호화/키 생성 도입 — 보안 경계, 사람 검토
+    reviewer: security-reviewer
+    source:
+      builtin: cwe             # CWE-327 취약 암호 알고리즘 · CWE-321 하드코딩 키
+    owner: security-reviewer
+    signals:
+      imports:
+        - javax.crypto
+        - java.security.KeyPairGenerator
+        - java.security.Signature
+      types: [Cipher, KeyGenerator, SecretKeySpec, KeyPairGenerator, Signature, Mac]
+      calls:
+        - Cipher.getInstance
+        - KeyGenerator.getInstance
+        - Signature.getInstance
+        - Mac.getInstance
+
+  # ---- 🟡 해시·다이제스트 (경고만) ----
+  # 🔴 등급 근거(TASK-032 AC#1 은 MessageDigest 를 `crypto` 로 묶었으나 **분리**했다 — D-079):
+  #   Python 카탈로그는 `cryptography`·`ssl`·`hmac` 을 protected 로 걸면서 **`hashlib` 은
+  #   의도적으로 제외**한다. `MessageDigest.getInstance("SHA-256")` 은 체크섬·ETag 등
+  #   무해한 용도가 압도적이라 Python 의 hashlib 과 같은 위치다.
+  #   ⇒ 이걸 protected 로 두면 **Java 만 Python 보다 엄격** = parity 왜곡 + 잡음.
+  #   ⇒ 능력 자체는 카탈로그에 **남기되**(AC#1 목록 충족·카드 노출) 등급만 `watched`.
+  #   Mac(=HMAC)은 Python `hmac` 이 protected 이므로 위 `crypto` 에 둔다(대칭).
+  - id: crypto_hash
+    title: 해시·다이제스트
+    level: watched
+    reason: 해시 알고리즘 도입 — 약한 알고리즘(MD5/SHA-1) 여부만 확인
+    reviewer: security-reviewer
+    source:
+      builtin: cwe             # CWE-328 Weak Hash
+    owner: security-reviewer
+    signals:
+      types: [MessageDigest]
+      calls:
+        - MessageDigest.getInstance
+
+  # ---- (이연) 인증서 검증 우회 ----
+  # Python 카탈로그는 `ssl._create_unverified_context` 를 "특히 위험"으로 명시한다.
+  # Java 대응은 커스텀 `TrustManager`/`HostnameVerifier` **구현**이라 호출 신호가 아니라
+  # **타입 구현(implements) 신호**가 필요하다 — 위 4종 신호 스키마 밖이다.
+  # TASK-032 AC#1 목록에도 없다. ⇒ 임의 확장하지 않고 **명시 이연**한다.
+  # 신호 스키마에 `implements:` 를 추가하는 별도 태스크로 다룬다(사유: 스키마 확장은
+  # 추출기 계약 변경 = 리뷰 대상). 지금 조용히 빠뜨리는 게 아니라 기록해 둔다.
+
+  # ---- (이연) 자격증명·PII 취급 ----
+  # Python 카탈로그와 동일 사유로 이연(값·데이터흐름 분석 필요, 단순 구문신호는 잡음 과다).

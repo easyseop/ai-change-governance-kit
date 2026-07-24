@@ -1,0 +1,2 @@
+def harmless():
+    return "ok"

@@ -1,0 +1,3 @@
+defaults: {maturity: enforcing, hops: 4}
+sinks:
+  - {id: jdk_runnable_field_method_reference_sink, function: Flow.sink, reason: JDK Runnable field method reference dispatch, owner: security-reviewer}

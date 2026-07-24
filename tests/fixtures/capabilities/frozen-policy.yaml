@@ -1,0 +1,10 @@
+policy_version: "test"
+
+capabilities:
+  - id: forbidden_test
+    level: frozen
+    reason: frozen must clamp to protected in tier 2
+    reviewer: security-reviewer
+    signals:
+      imports: [subprocess]
+      mystery: [subprocess.Popen]

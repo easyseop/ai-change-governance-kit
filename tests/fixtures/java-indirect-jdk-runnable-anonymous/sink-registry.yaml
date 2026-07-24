@@ -1,0 +1,3 @@
+defaults: {maturity: enforcing, hops: 4}
+sinks:
+  - {id: jdk_runnable_anonymous_sink, function: Flow.sink, reason: JDK Runnable anonymous dispatch, owner: security-reviewer}

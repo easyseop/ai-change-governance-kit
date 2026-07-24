@@ -1,0 +1,11 @@
+change_intent:
+  requirement_id: REQ-BROAD-NORMAL
+  author: codex
+  allowed_paths:
+    - ".harness/**"
+    - "collab/**"
+    - "docs/**"
+    - "policies/**"
+    - "scripts/**"
+    - "summaries/**"
+  forbidden_paths: []

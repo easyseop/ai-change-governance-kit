@@ -1,0 +1,23 @@
+path_rules:
+  - id: auth-token
+    tokens: [auth]
+    level: protected
+    reason: authentication path token
+  - id: migration-token
+    tokens: [migrations]
+    level: protected
+    reason: database migration path token
+  - id: secret-token
+    tokens: [secrets]
+    level: protected
+    reason: secret-bearing path token
+
+codeowner_rules:
+  - id: security-owned
+    owners: ["@bank/security"]
+    level: protected
+    reason: security team owned path
+  - id: dba-owned
+    owners: ["@bank/dba"]
+    level: protected
+    reason: DBA owned path

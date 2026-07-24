@@ -1,0 +1,3 @@
+defaults: {maturity: enforcing, hops: 4}
+sinks:
+  - {id: nested_lambda_deep_sink, function: Flow.sink, reason: deep nested lambda coverage, owner: security-reviewer}

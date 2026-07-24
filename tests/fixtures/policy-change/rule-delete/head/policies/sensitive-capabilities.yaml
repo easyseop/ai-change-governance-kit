@@ -1,0 +1,15 @@
+policy_version: "test"
+defaults:
+  max_verdict: approval_required
+  allowed_levels: [protected, watched]
+  approve_levels: [protected]
+  warn_levels: [watched]
+  new_only: true
+capabilities:
+  - id: subprocess_exec
+    level: protected
+    reason: command execution
+    reviewer: security-reviewer
+    signals:
+      imports: []
+      calls: [os.system]

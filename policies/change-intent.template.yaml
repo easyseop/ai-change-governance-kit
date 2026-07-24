@@ -1,0 +1,30 @@
+# =====================================================================
+# change-intent.yaml  ·  변경 의도 선언 (양식)
+# =====================================================================
+# AI(또는 개발자)가 코드를 바꾸기 "전에" 무엇을 어디까지 바꿀지 선언한다.
+# 하네스는 실제 diff 가 이 선언 범위 안에 머물렀는지 비교한다.
+# 실제 예시는 change-intent.example.yaml 참고.
+# =====================================================================
+
+change_intent:
+  requirement_id: 미정          # 요구사항 식별자. 예: REQ-2026-001
+  purpose: 미정                 # 한 줄 목적. 예: 관리자 화면에 검색 조건 추가
+  author: 미정                  # 변경 주체. 예: claude-code / codex / 홍길동
+
+  # 변경이 허용되는 경로 (glob). diff 가 이 밖을 건드리면 scope-creep.
+  allowed_paths:
+    - 미정                      # 예: frontend/src/features/admin/**
+
+  # 절대 건드리면 안 되는 경로 (선언적 가드 — sensitive-zones 와 별개로 이번 작업 한정)
+  forbidden_paths:
+    - 미정                      # 예: backend/app/auth/**
+
+  # 반드시 실제 변경 파일에 나타나야 하는 경로(선택). 벤더 패치 유실 탐지 등에 사용.
+  # 리터럴 경로를 권장한다. glob은 그 아래 아무 파일 1건만 바뀌어도 충족되는 거친 보증이다.
+  # rename은 목적지 경로만, delete는 경로가 변경됐다는 사실만 판정한다.
+  expected_paths:
+    - vendor/package/patches/required_fix.py
+
+  # 예상 변경 유형 (실제와 비교해 의외 변경 탐지)
+  expected_change_types:
+    - 미정                      # api_field_addition / ui_change / test_update / ...

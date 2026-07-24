@@ -1,0 +1,11 @@
+policy_version: test
+defaults:
+  block_levels: [frozen]
+  approve_levels: [protected]
+  warn_levels: [watched]
+  unlisted_level: free
+zones:
+  - path: "app/settlement/**"
+    level: frozen
+    reason: settlement transfer sink
+    required_approval: settlement-reviewer

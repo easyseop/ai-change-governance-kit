@@ -1,0 +1,6 @@
+change_intent:
+  requirement_id: REQ-EXPECTED-NONE
+  author: codex
+  allowed_paths:
+    - app/**
+  forbidden_paths: []
