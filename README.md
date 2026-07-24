@@ -37,6 +37,7 @@
 git clone https://github.com/easyseop/ai-change-governance-kit.git
 cd ai-change-governance-kit
 
+python3 --version  # 3.10 이상인지 확인
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
